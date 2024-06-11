@@ -1,5 +1,5 @@
 # ==============================================================================
-# Reproduces Figure # of Truong et al. 2024. 
+# Reproduces Figure 6 of Truong et al. 2024. 
 # 
 # Demonstrates ingredients to stitch two HTTK models together. 
 # Namely, plots Vconceptus, Wconceptus, and Kconceptus2pu as a function of time. 
