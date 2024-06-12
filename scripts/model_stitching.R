@@ -220,3 +220,11 @@ ggsave(plot = p,
        width = 8.1, height = 8.2, 
        device = "tiff", 
        filename = "./doc/comptox-thyroid-httk/figures/model_stitching.tiff")
+
+ggsave(plot = p, 
+       units = "in", 
+       dpi = 300, 
+       width = 8.1, height = 8.2, 
+       device = "png", 
+       filename = "./doc/comptox-thyroid-httk/figures/model_stitching.png")
+
