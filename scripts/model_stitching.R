@@ -6,11 +6,11 @@
 # 
 # @author: Kimberly Truong
 # created: 10/24/23
-# updated: 6/11/24 
+# updated: 6/20/24
 # ==============================================================================
 
 rm(list=ls())
-library(httk) # this deviates from v2.3.1 but will be integrated into a future ver
+library(httk) # fullterm_pregnancy branch (will be integrated into a future ver)
 library(data.table)
 library(dplyr)
 library(tidyverse)
@@ -110,7 +110,7 @@ volpp <- ggplot(ggdata2,
   scale_color_manual(labels = c(TeX("$V_{conceptus}$"), TeX("$V_{fetus} + V_{placenta} + V_{amnf}$")), 
                      values = c('1tri_pbtk' = '#7CAE00', 'fetal_pbtk' = '#C77CFF')) +
   geom_vline(xintercept = 13, 
-             linetype = 'longdash', color = 'black', linewidth = 1.5) +
+             linetype = 'dashed', color = 'black', linewidth = 1.25) +
   labs(x = 'Gestational Age (weeks)', y = 'Volume (L)', 
        color = "", ) +
   my_theme +
@@ -140,7 +140,7 @@ masspp <- ggplot(mass_dat.m,
                                 TeX("$W_{fetus} + W_{placenta} + W_{amnf}$")), 
                      values = c('1tri_pbtk' = '#F8766D', 'fetal_pbtk' = '#00BFC4')) +
   geom_vline(xintercept = 13, 
-             linetype = 'longdash', color = 'black', linewidth = 1.5) +
+             linetype = 'dashed', color = 'black', linewidth = 1.25) +
   labs(x = 'Gestational Age (weeks)', y = 'Mass (kg)', 
        color = "") +
   my_theme +
@@ -183,6 +183,9 @@ df <- df[, c("dtxsid", "chnm", parameters)]
 df[c("Kconceptus2pu_initial", "Kconceptus2pu_final")] <- lapply(df[c("Kconceptus2pu_initial", "Kconceptus2pu_final")], log10)
 df$m <- (df$Kconceptus2pu_final - df$Kconceptus2pu_initial)/13
 
+# look at summary stats of slopes
+summary(df$m)
+
 ylims <- c(floor(min(df$Kconceptus2pu_initial)), ceiling(max(df$Kconceptus2pu_final)))
 
 # show only two example chems with +/- slopes 
@@ -204,7 +207,7 @@ Kconc.pp <- ggplot(df[which(df$chnm %in% c("Retinol acetate", "17beta-Trenbolone
            size = 5)
 
 # put it all together
-p <- ggdraw() +
+fig <- ggdraw() +
   draw_plot(volpp, x = 0, y = 0.5, width = 0.5, height = 0.5) +
   draw_plot(masspp, x = 0.5, y = 0.5, width = 0.5, height = 0.5) +
   draw_plot(Kconc.pp, x = 0.10, y = 0, width = 0.75, height = 0.5) +
@@ -212,9 +215,9 @@ p <- ggdraw() +
                   size = 15, 
                   x = c(0, 0.5, 0), 
                   y = c(1, 1, 0.5))
-p
+fig
 
-ggsave(plot = p, 
+ggsave(plot = fig, 
        units = "in", 
        dpi = 300, 
        width = 8.1, height = 8.2, 
