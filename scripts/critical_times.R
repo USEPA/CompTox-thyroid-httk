@@ -8,7 +8,7 @@
 # 
 # @author: Kimberly Truong
 # created: 2/1/2023
-# updated: 6/12/2024
+# updated: 6/20/2024
 # ==============================================================================
 
 rm(list=ls())
@@ -150,7 +150,7 @@ melt_times <- function(name, df) {
   return(df.m)
 }
 
-new.times.list <- Map(melt_times, names(tissue_list), crit.times2)
+new.times.list <- Map(melt_times, names(tissue_list), crit.times)
 times.m <- bind_rows(new.times.list)
 setDT(times.m)
 
@@ -186,7 +186,7 @@ cdfpp <- ggplot(ecdf.data, aes(min_tstar, color = body)) +
                                 TeX("$min(T^{*}_{m})$: Min week to reach Cmax in the liver or thyroid of the mother")), 
                      values = c("#73D055FF", "#482677FF")) +
   geom_vline(xintercept = 13, 
-             linetype = 'longdash', color = 'red', linewidth = 1) +
+             linetype = 'dashed', color = 'orange', linewidth = 1) +
   my_theme + 
   theme(legend.position = "bottom", 
         legend.direction = "vertical", 
@@ -213,24 +213,25 @@ get_param <- function(dtxsid, parameter) {
   return(params[[parameter]])
 }
 
-physchem.tb <- matrix(0, ncol = length(parameters), nrow = nrow(ivive.moe.tb))
-
-for(i in 1:nrow(ivive.moe.tb)) {
-  physchem.tb[i, ] = sapply(parameters, get_param, dtxsid = ivive.moe.tb$dtxsid[i])
-  cat("Done for", i, "chemicals \n")
-}
-
-colnames(physchem.tb) <- parameters
-physchem.tb <- data.frame(physchem.tb)
-physchem.tb$dtxsid <- ivive.moe.tb$dtxsid
-physchem.tb$chnm <- ivive.moe.tb$chnm
-physchem.tb <- physchem.tb[, c("dtxsid", "chnm", parameters)]
-
+# this was done once and saved in the RData file 
+# physchem.tb <- matrix(0, ncol = length(parameters), nrow = nrow(ivive.moe.tb))
+# 
+# for(i in 1:nrow(ivive.moe.tb)) {
+#   physchem.tb[i, ] = sapply(parameters, get_param, dtxsid = ivive.moe.tb$dtxsid[i])
+#   cat("Done for", i, "chemicals \n")
+# }
+# 
+# colnames(physchem.tb) <- parameters
+# physchem.tb <- data.frame(physchem.tb)
+# physchem.tb$dtxsid <- ivive.moe.tb$dtxsid
+# physchem.tb$chnm <- ivive.moe.tb$chnm
+# physchem.tb <- physchem.tb[, c("dtxsid", "chnm", parameters)]
+#
 # make everything on a log10 scale
-physchem.tb[parameters] <- lapply(physchem.tb[parameters], log10)
+# physchem.tb[parameters] <- lapply(physchem.tb[parameters], log10)
 
 # melt data for violin plots
-ecdf.tk <- reshape2::melt(physchem.tb[, c("dtxsid", parameters)], 
+ecdf.tk <- reshape2::melt(physchem.tb[, c("dtxsid", parameters[parameters != "Fraction_unbound_plasma_fetus"])], 
                           id.vars = c("dtxsid"), 
                           variable.name = "TK_prop", 
                           value.name = "value")
@@ -268,7 +269,7 @@ vpp
 # put it all together
 fig <- ggdraw() + 
   draw_plot(cdfpp, x = 0, y = 0.2, width = 0.5, height = 0.7) +
-  draw_plot(vpp, x = 0.5, y = 0.07, width = 0.5, height = 0.8) +
+  draw_plot(vpp, x = 0.5, y = 0.10, width = 0.5, height = 0.8) +
   draw_plot_label(label = c("A", "B"), size = 15, 
                   x = c(0, 0.5), y = c(0.90, 0.90))
 
@@ -281,7 +282,15 @@ ggsave(plot = fig,
        device = "tiff", 
        filename = "./doc/comptox-thyroid-httk/figures/ecdf.tiff")
 
+ggsave(plot = fig, 
+       units = "in", 
+       dpi = 300, 
+       width = 13.9, height = 8.1, 
+       device = "png", 
+       filename = "./doc/comptox-thyroid-httk/figures/ecdf.png")
+
 # update RData file with min times to reach Cmax in fetal vs. maternal tissues
+# as well as physicochemical property values 
 # e <- new.env(parent = emptyenv())
 # load('./data/Deiodinases/deiod_invitrodbv3_5_filtered_ivive_fullterm_preg_branch.RData', envir = e)
 # e$ecdf.data <- ecdf.data
