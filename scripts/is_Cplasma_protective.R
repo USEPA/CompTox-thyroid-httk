@@ -219,13 +219,13 @@ fig
 ggsave(plot = fig, 
        units = "in", 
        dpi = 300, 
-       width = 18, height = 16.5, 
+       width = 17.5, height = 16.5, 
        device = "tiff", 
        filename = "./doc/comptox-thyroid-httk/figures/is_Cplasma_protective.tiff")
 
 ggsave(plot = fig, 
        units = "in", 
        dpi = 300, 
-       width = 18, height = 16.5, 
+       width = 17.5, height = 16.5, 
        device = "png", 
        filename = "./doc/comptox-thyroid-httk/figures/is_Cplasma_protective.png")
