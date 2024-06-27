@@ -32,7 +32,7 @@ pdata <- pdata[order(dtxsid)]
 pdata2 <- unique(pdata[, .(dtxsid, chnm, min_aed)])
 
 # add in PODs from ToxValDB, if available 
-toxval <- read.xlsx('./data/toxval pods chemical level oral mgkgday.xlsx')
+toxval <- read.xlsx('./tables/toxval pods chemical level oral mgkgday.xlsx')
 toxval <- toxval %>% filter(dtxsid %in% pdata2$dtxsid)
 pdata2$pod <- log10(toxval$pod[match(pdata2$dtxsid, toxval$dtxsid)])
 pdata3 <- pdata2[which(!is.na(pdata2$pod)), ] 
