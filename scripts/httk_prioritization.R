@@ -137,18 +137,18 @@ bers.lessthan3 <- ggarrange(listgg$DIO1, listgg$IYD, listgg$DIO2, listgg$DIO3,
           common.legend = TRUE, legend = 'bottom', 
           align = "hv")
 
-ggsave(plot = bers.lessthan3, 
-       units = "in", 
-       dpi = 300, 
-       width = 21.33, height = 11, 
-       device = "tiff", 
+ggsave(plot = bers.lessthan3,
+       units = "in",
+       dpi = 300,
+       width = 21.33, height = 11,
+       device = "tiff",
        filename = "./doc/comptox-thyroid-httk/figures/preg_prioritization_by_BER.tiff")
 
-ggsave(plot = bers.lessthan3, 
-       units = "in", 
-       dpi = 300, 
-       width = 21.33, height = 11, 
-       device = "png", 
+ggsave(plot = bers.lessthan3,
+       units = "in",
+       dpi = 300,
+       width = 21.33, height = 11,
+       device = "png",
        filename = "./doc/comptox-thyroid-httk/figures/preg_prioritization_by_BER.png")
 
 # update RData file with melted data for ggplot
@@ -279,8 +279,8 @@ seem3pp <- ggplot(data = plasma.tissue.bers[-3, ],
                      limits = c(0, ceiling(max.uncertainty))) +
   labs(x = 'min BER by Chemical', y = TeX(r'($log_{10}ExpoCast_{u95} - log_{10}ExpoCast_{med}$)'))
 
-median(plasma.tissue.bers$min_BER)
-#> [1] 3.375
+median(plasma.tissue.bers$min_BER[-3])
+#> [1] 3.38
 
 bers2 <- plot_grid(preg.vs.nonpreg.pp, seem3pp, 
           labels = "AUTO", label_size = 20)
