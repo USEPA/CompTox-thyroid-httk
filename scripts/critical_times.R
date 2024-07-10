@@ -43,9 +43,13 @@ for (i in 1:nrow(ivive.moe.tb)) {
                       restrictive.clearance = TRUE,
                       f = 0.001)
   
+  ivive.moe.tb$half.life[i] <- calc_half_life(dtxsid = ivive.moe.tb$dtxsid[i])
   ivive.moe.tb$the.day[i] <- css.out$the.day
   
 }
+
+ivive.moe.tb$half.life.yrs <- ivive.moe.tb$half.life/24/30/12
+ivive.moe.tb$half.life.wks <- ivive.moe.tb$half.life/24/7
 
 # Main Script starts here ------------------------------------------------------
 

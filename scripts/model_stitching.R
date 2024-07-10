@@ -179,31 +179,41 @@ df$dtxsid <- ivive.moe.tb$dtxsid
 df$chnm <- ivive.moe.tb$chnm
 df <- df[, c("dtxsid", "chnm", parameters)]
 
-# log10 transform the data first 
-df[c("Kconceptus2pu_initial", "Kconceptus2pu_final")] <- lapply(df[c("Kconceptus2pu_initial", "Kconceptus2pu_final")], log10)
-df$m <- (df$Kconceptus2pu_final - df$Kconceptus2pu_initial)/13
+# prior to log transforming the data 
+df$slopes <- (df$Kconceptus2pu_final-df$Kconceptus2pu_initial)/13
 
 # look at summary stats of slopes
-summary(df$m)
+summary(df$slopes)
+#> Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+#>-7048     -40      -4   66110       0 6034615 
 
-ylims <- c(floor(min(df$Kconceptus2pu_initial)), ceiling(max(df$Kconceptus2pu_final)))
+# summary rounds up to the nearest int
+quantile(df$slopes, c = c(0, 0.25, 0.5, 0.75, 1))
+#> 0%           25%           50%           75%          100% 
+#>-7.047692e+03 -4.047692e+01 -3.591538e+00 -4.710769e-01  6.034615e+06 
+ 
+# log10 transform y axis 
+df[c("Kconceptus2pu_initial.log10", "Kconceptus2pu_final.log10")] <- lapply(df[c("Kconceptus2pu_initial", "Kconceptus2pu_final")], log10)
+df$m <- (df$Kconceptus2pu_final.log10-df$Kconceptus2pu_initial.log10)/13
+
+ylims <- c(floor(min(df$Kconceptus2pu_initial.log10)), ceiling(max(df$Kconceptus2pu_final.log10)))
 
 # show only two example chems with +/- slopes 
-Kconc.pp <- ggplot(df[which(df$chnm %in% c("Retinol acetate", "17beta-Trenbolone")),]) + 
-  geom_abline(aes(intercept = Kconceptus2pu_initial, slope = m, color = factor(chnm)), 
+Kconc.pp <- ggplot(df[which(df$chnm %in% c("Retinol acetate", "Terbutylazine")),]) + 
+  geom_abline(aes(intercept = Kconceptus2pu_initial.log10, slope = m, color = factor(chnm)), 
               linewidth = 1.5) +
   scale_x_continuous(breaks = seq(0,13), 
                      labels = as.character(seq(0,13)), 
                      limits = c(0,13)) +
   scale_y_continuous(breaks = seq(ylims[1], ylims[2], 1), 
                      limits = ylims) +
-  scale_color_manual(values = c('17beta-Trenbolone' = '#FFB900', 'Retinol acetate' = '#5773CC')) +
+  scale_color_manual(values = c('Terbutylazine' = '#FFB900', 'Retinol acetate' = '#5773CC')) +
   labs(x = "Gestational Age (weeks)", y = TeX("$log_{10} K_{conceptus2pu}$")) +
   my_theme +
   theme(legend.position = "none") +
   annotate("text", x = 11, y = 7.5, label = "Retinol acetate", 
            size = 5) +
-  annotate("text", x = 11, y = 1.5, label = "17beta-Trenbolone", 
+  annotate("text", x = 11, y = 1.75, label = "Terbutylazine", 
            size = 5)
 
 # put it all together
@@ -224,7 +234,7 @@ ggsave(plot = fig,
        device = "tiff", 
        filename = "./doc/comptox-thyroid-httk/figures/model_stitching.tiff")
 
-ggsave(plot = p, 
+ggsave(plot = fig, 
        units = "in", 
        dpi = 300, 
        width = 8.1, height = 8.2, 
