@@ -151,8 +151,8 @@ hitc.dist
 
 ## Class Composition by Assay
 
-The top 20 classes in each library for that assay are shown here. 
-Classes that made up less than 1% of the library for that assay shown here were regrouped into a broader and relevant "Other_[classes from Classyfire|Drugs|Expert chemicals|Pesticides|PFAS categories]" category. 
+The top 25 classes (or groups of classes) for each chemical library are shown here. 
+Classes that made up less than 1% of the library for that assay shown here were regrouped into a broader and related "Other [classes from Classyfire|Drugs|Expert chemicals|Pesticides|PFAS categories]" category. 
 
 ``` {r, warning = FALSE, fig.width = 20, fig.height = 14}
 # distribution of classes for test libraries 
