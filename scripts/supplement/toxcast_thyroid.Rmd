@@ -1,0 +1,424 @@
+---
+title: "Overview of Thyroid-Related Data in ToxCast"
+author: "Kimberly Truong"
+date: "2024-07-23"
+output:
+  html_document:
+    code_folding: hide
+    collapsed: yes
+    df_print: paged
+    lightbox: no
+    number_sections: no
+    self_contained: yes
+    thumbnails: no
+    toc: yes
+    toc_float: yes
+    keep_md: no 
+  pdf_document:
+    toc: yes
+---
+
+# Load Invitrodb data 
+```{r setup, include = FALSE}
+
+library(knitr)
+knitr::opts_knit$set(root.dir = 'C:/Users/ktruong/OneDrive - Environmental Protection Agency (EPA)/Profile/Documents/thyroid_prioritization')
+
+```
+
+```{r, warning = FALSE, message = FALSE}
+
+rm(list=ls())
+library(data.table)
+library(tcpl)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(viridis)
+library(RColorBrewer)
+library(colorspace)
+library(scales)
+library(ggpubr)
+library(pheatmap)
+library(dendextend)
+
+load('./data/invitrodb_v3_5_thyroid_data.RData')
+
+# create a `not in` operator
+`%notin%` <- Negate(`%in%`)
+
+```
+
+# Combining sc and mc data {.tabset .tabset-fade .tabset-pills}
+
+## Get AC50s, hitcalls, filter out control wells
+```{r test-data, message = FALSE}
+mc5[hitc == 0, modl_ga := 4] # negative in mc => ac50 is assigned a 4
+
+long_mc5 <- mc5 %>% 
+  select(dsstox_substance_id,aenm,modl_ga) %>% 
+  group_by(dsstox_substance_id,aenm) %>%
+  summarise(modl_ga = mean(modl_ga)) %>%
+  filter(!is.na(dsstox_substance_id)) # this filters out control wells 
+
+long_sc2 <- sc2 %>% 
+  select(dsstox_substance_id,aenm,hitc) %>%
+  group_by(dsstox_substance_id,aenm) %>%
+  summarise(hitc = max(hitc)) %>%
+  filter(!is.na(dsstox_substance_id))
+
+```
+
+## Assign dummy values for chemicals with just sc data
+```{r data-wrangling}
+# get ac50 and/or sc-hitc for each chemical
+long_all <- long_mc5 %>% 
+  full_join(long_sc2, by = c("dsstox_substance_id","aenm")) 
+
+# when there is only sc data, assign a 5 regardless of +/-
+long_hmap <- long_all %>%
+  rowwise() %>%
+  mutate(var_val = case_when(
+    is.na(modl_ga) ~ 5,
+    TRUE ~ modl_ga
+  )) %>%
+  ungroup()
+
+# pivot wider
+Mac50 <-  long_hmap %>% 
+  select(dsstox_substance_id, aenm, var_val) %>%
+  pivot_wider(names_from = aenm, values_from = var_val) %>%
+  as.data.frame() # rownames can't be set on tibble otherwise
+
+Mac50[is.na(Mac50)] = 6 # chem not tested in given assay 
+rownames(Mac50) <- Mac50$dsstox_substance_id
+Mac50 <- Mac50[, -1]
+
+head(Mac50)
+
+```
+
+## Form a hitcall matrix 
+```{r}
+long_hmap <- long_hmap %>% 
+  mutate(hitc = case_when(
+    modl_ga == 4 | modl_ga == 5 ~ 0, 
+    modl_ga %notin% c(4,5) ~ 1
+  ))
+
+Mhc <- long_hmap %>% 
+  select(dsstox_substance_id, aenm, hitc) %>% 
+  pivot_wider(names_from = aenm, values_from = hitc) %>% 
+  as.data.frame()
+rownames(Mhc) <- Mhc$dsstox_substance_id
+Mhc <- Mhc[, -1]
+
+```
+
+# Overview of thyroid-related data {.tabset .tabset-fade .tabset-pills}
+## Assessing Total Coverage 
+
+There are 102 unique assay endpoints in ToxCast/Tox21 that are thyroid-related. 
+```{r uniq-aeids}
+# how many aeids are there?
+ncol(Mhc)
+
+```
+
+```{r}
+Mtest = Mhc
+Mtest[!is.na(Mhc)] = 1 
+Mtest[is.na(Mhc)] = 0
+cs = colSums(Mtest) # chems in each aeid
+rs = rowSums(Mtest) # aeids tested for each chem
+
+# Number of Assay Endpoints per Chem 
+hist(rs, main = 'Number of Thyroid-related Endpoints for each Chemical',
+     xlab = '# of Aeids per Chemical', 
+     ylab = '# of Chemicals')
+
+summary(rs)
+
+# Number of Chems per Endpoint 
+hist(cs, main = 'Number of Chemicals Tested in each Thyroid-Related Endpoint',
+     xlab = '# of Chemicals Tested in an Aeid', 
+     ylab = '# of Aeids')
+
+summary(cs)
+
+```
+## ToxCast Coverage 
+Removing the 27 Tox21 assays to find sets of broader chemical coverage...
+```{r}
+# How many Tox21 assays are there? 
+ans <- ace.thyroid[grepl("TOX21", ace.thyroid$assay_component_endpoint_name), ]
+tox21.aenm <- unique(ans$assay_component_endpoint_name)
+
+# look at just the ToxCast assays 
+Mhc.tc <- Mhc[, names(Mhc) %notin% tox21.aenm]
+Mhc.tc <- Mhc.tc[rowSums(is.na(Mhc.tc)) != ncol(Mhc.tc), ]
+
+Mac50.tc <- Mac50[, names(Mac50) %notin% tox21.aenm]
+Mac50.tc <- Mac50.tc[rowSums(Mac50.tc == 6) != ncol(Mac50.tc), ]
+
+Mtest.tc = Mhc.tc
+Mtest.tc[!is.na(Mhc.tc)] = 1
+Mtest.tc[is.na(Mhc.tc)] = 0 
+cs.tc = colSums(Mtest.tc)
+rs.tc = rowSums(Mtest.tc)
+
+# Number of Assay Endpoints per Chem 
+hist(rs.tc, main = 'Number of Thyroid-related ToxCast Endpoints for each Chemical',
+     xlab = '# of Aeids per Chemical', 
+     ylab = '# of Chemicals')
+
+# Number of Chems per Endpoint 
+hist(cs.tc, main = 'Number of Chemicals Tested in each Thyroid-Related Endpoint from ToxCast',
+     xlab = '# of Chemicals in an Aeid', 
+     ylab = '# of Aeids')
+
+```
+
+## How many hits were sc-positive but no mc?
+There is a single row for each unique DTXSID x aeid pair (due to using `tcpl:: tcplSubsetChid()`). 
+
+Table summarizes the number of chemicals tested positive in sc but were never tested in mc for whatever reason. The deiodinase assays were among the ones with the highest counts. Nchems gives the total number of unique chemicals tested in that assay. 
+
+```{r}
+setDT(long_all)
+long_all[, Nchems := length(unique(dsstox_substance_id)), by = aenm]
+
+# how many were tested to be sc == 1 but no mc?
+scpos.nomc.out <- long_all[hitc == 1 & is.na(modl_ga), .(scpos_nomc = .N), by = .(aenm, Nchems)
+                           ][order(-scpos_nomc)]
+
+scpos.nomc.out
+
+```
+
+## analyze hDIO/IYD assays
+```{r}
+deiod.meta <- ace.thyroid[thyroid_related_target == 'Deiodinases', 
+                          .(aeid, aenm = assay_component_endpoint_name)]
+
+# ignore amphibian assays 
+h.deiod.aeids <- deiod.meta[grepl("\\w+h(DIO|IYD)\\w+", deiod.meta$aenm), aeid]
+names(h.deiod.aeids) <- c('DIO1', 'DIO2', 'DIO3', 'IYD')
+
+# add aeid column to long_all and scpos.nomc.out 
+setnames(ace.thyroid, "assay_component_endpoint_name", "aenm")
+long_all$aeid <- ace.thyroid$aeid[match(long_all$aenm, ace.thyroid$aenm)]
+scpos.nomc.out$aeid <- ace.thyroid$aeid[match(scpos.nomc.out$aenm, ace.thyroid$aenm)]
+
+# get all the chems that were sc-positive but missing mc among deiod assays
+deiod.no.mc <- long_all[aeid %in% h.deiod.aeids & is.na(modl_ga) & hitc == 1, 
+                        .(aeid, aenm, dsstox_substance_id)]
+
+# compare coff, max_med for each assay 
+list_of_df <- vector("list", length(h.deiod.aeids))
+summarize_by_assay <- function(endpoint.id) {
+  chems <- deiod.no.mc[aeid == endpoint.id, dsstox_substance_id]
+  out <- sc2[aeid == endpoint.id & dsstox_substance_id %in% chems, 
+             .(dsstox_substance_id, coff, max_med)]
+  return(summary(out))
+}
+
+list_of_df <- lapply(h.deiod.aeids, summarize_by_assay)
+list_of_df
+
+```
+A 50%-inhibition hard cutoff was used to pass chemicals to mc for the DIO/IYD assays. 
+
+# Hierarchical Clustering of Chemicals {.tabset .tabset-fade .tabset-pills}
+
+## categorize thyroid targets 
+```{r}
+# categorize thyroid targets 
+ace.thyroid[, category := as.character(NA)]
+ace.thyroid[thyroid_related_target %in% c('TPO', 'NIS', 'Deiodinases'), category := 'TH_economy']
+ace.thyroid[thyroid_related_target %in% c('TRHR', 'TSHR', 'THR'), category := 'endocrine']
+ace.thyroid[thyroid_related_target %in% c('AhR', 'CAR', 'PXR'), category := 'liver']
+ace.thyroid[thyroid_related_target == 'Binding', category := 'TH_binding']
+
+```
+
+## run hclust
+```{r, fig.height = 15, fig.width = 15}
+Mac50.tc.mat <- as.matrix(Mac50.tc)
+
+# reorder assays by category
+Mac50.tc.aenm <- colnames(Mac50.tc.mat)
+Mac50.tc.categ <- sapply(Mac50.tc.aenm, function(k) {
+  ace.thyroid[aenm == k, unique(category)]
+})
+metadata <- data.frame(category = Mac50.tc.categ, row.names = Mac50.tc.aenm)
+metadata$category <- as.factor(metadata$category)
+metadata <- metadata %>% arrange(factor(category, levels = c('endocrine', 'liver', 'TH_synthesis', 'TH_binding')))
+
+Mac50.tc.mat <- Mac50.tc.mat[, rownames(metadata)]
+hclust_chems <- hclust(dist(Mac50.tc.mat), method = 'complete')
+
+as.dendrogram(hclust_chems) %>%
+  plot(horiz = TRUE)
+
+# choose k for hierarchical clustering 
+kh <- 5
+chem_cluster <- cutree(tree = as.dendrogram(hclust_chems), k = kh)
+clust_dat <- as.data.frame(chem_cluster)
+colnames(clust_dat) <- 'cluster'
+clust_dat$cluster <- as.factor(clust_dat$cluster)
+
+```
+
+## ToxCast heatmap
+
+```{r, fig.width=18,fig.height=14}
+ac50_bk <- seq(-5.5, 3, by = 0.1)
+bk2 <- seq(3.5, 6.5, by = 1)
+bk <- c(ac50_bk, bk2)
+
+ac50.cols <- colorRampPalette(rev(brewer.pal(n = 7, name = "RdYlBu")))(n = length(ac50_bk)- 1)
+# ac50.cols <- viridis(n = length(ac50_bk) - 1)
+# other.cols <- c('#FFFFFF', '#44BB99', '#00BAD7', '#DDDDDD')
+other.cols <- c('#FFFFFF', '#66CC99', '#9999CC', '#DDDDDD')
+all.cols <- c(ac50.cols, other.cols)
+
+# change annotation colors 
+annot_rcolors <- brewer.pal(n = kh + 1, name = 'Set3')[-1] # stole from Set3
+annot_ccolors <- brewer.pal(n = 4, name = 'Set1')
+
+names(annot_rcolors) <- seq_len(kh)
+names(annot_ccolors) <- c('endocrine', 'liver', 'TH_binding', 'TH_economy')
+
+ann_colors <- list(category = annot_ccolors, 
+                   cluster = annot_rcolors)
+
+tc.hmap <- pheatmap(Mac50.tc.mat,
+  color = all.cols,
+  breaks = bk,
+  legend_breaks = c(seq(-5, 3, by = 2), 4:6),
+  legend_labels = c(as.character(seq(-5,3, by = 2)), "tested negative in mc", 
+                    "tested only in sc", "not tested"),
+  cluster_rows = T, 
+  cluster_cols = F, 
+  clustering_distance_rows = 'euclidean', 
+  clustering_method = 'complete', 
+  # border_color = 'white', 
+  # cellwidth = 20,
+  # cellheight = 3,
+  # cutree_rows = 5, 
+  show_rownames = F, 
+  annotation_col = metadata, 
+  annotation_row = clust_dat, 
+  annotation_colors = ann_colors, 
+  annotation_legend=T)
+
+tc.hmap
+
+```
+
+## clean up heatmap
+```{r}
+summary(cs.tc)
+head(sort(cs.tc))
+
+```
+
+After removing these assays with few chemicals tested: 
+
+  * ERF_ADME_hCYP2B6_dn 
+  * ERF_ADME_hCYP3A4_dn
+  * ERF_NR_hTHRA_Agonist
+  * ATG_THRb_TRANS2_dn
+  * ATG_THRb_TRANS2_up
+
+```{r, fig.width=18,fig.height=14}
+# remove assays with little chem coverage from Mac50.tc and Mhc.tc 
+rmv.assays <- names(sort(cs.tc))[1:5]
+jj.rmv <- which(colnames(Mhc.tc) %in% rmv.assays)
+
+Mhc.tc.clean <- Mhc.tc[, -jj.rmv]
+Mac50.tc.clean <- Mac50.tc[, -jj.rmv]
+
+# update column (aenm) metadata
+aenm.meta.clean <- metadata[(rownames(metadata) %notin% rmv.assays), , drop = FALSE]
+Mac50.tc.clean <- Mac50.tc.clean[, rownames(aenm.meta.clean)]
+
+# check to see all chems are still covered by at least one endpoint after removal
+Mtest.tc.clean = Mhc.tc.clean 
+Mtest.tc.clean[!is.na(Mtest.tc.clean)] = 1 
+Mtest.tc.clean[is.na(Mtest.tc.clean)] = 0
+rs.tc2 = rowSums(Mtest.tc.clean)
+summary(rs.tc2)
+
+# plot to double check
+tc.clean.hmap <- pheatmap(Mac50.tc.clean,
+  color = all.cols,
+  breaks = bk,
+  legend_breaks = c(seq(-5, 3, by = 2), 4:6),
+  legend_labels = c(as.character(seq(-5,3, by = 2)), 
+                    "tested negative in mc", "tested only in sc", "not tested"),
+  cluster_rows = T, 
+  cluster_cols = F, 
+  clustering_distance_rows = 'euclidean', 
+  clustering_method = 'complete', 
+  # border_color = 'white', 
+  # cellwidth = 20,
+  # cellheight = 3,
+  # cutree_rows = 5, 
+  show_rownames = F, 
+  annotation_col = aenm.meta.clean, 
+  annotation_row = clust_dat, 
+  annotation_colors = ann_colors, 
+  annotation_legend=T)
+
+tc.clean.hmap
+
+ggsave(plot = tc.clean.hmap,
+       units = "in",
+       dpi = 300,
+       width = 22, height = 14,
+       device = "jpg",
+       filename = "./doc/comptox-thyroid-httk/figures/supp/ToxCast_invitrodb_v3_5_thyroid_heatmap.jpg")
+
+```
+
+## just DIO/IYD assays
+
+```{r, fig.width = 5, fig.height = 8}
+deiod.aenm <- deiod.meta[aeid %in% h.deiod.aeids, aenm]
+
+Mac50.deiod <- Mac50.tc.clean[, deiod.aenm]
+Mhc.deiod <- Mhc.tc.clean[, deiod.aenm]
+Mtest.deiod = Mhc.deiod
+Mtest.deiod[!is.na(Mhc.deiod)] = 1
+Mtest.deiod[is.na(Mhc.deiod)] = 0
+rs.deiod = rowSums(Mtest.deiod)
+
+Mac50.deiod <- Mac50.deiod[rs.deiod >= 1, ]
+colnames(Mac50.deiod) <- c("DIO1", "DIO2", "DIO3", "IYD")
+
+deiod.hmap <- pheatmap(Mac50.deiod,
+  color = all.cols,
+  breaks = bk,
+  legend_breaks = c(seq(-5, 3, by = 2), 4:6),
+  legend_labels = c(as.character(seq(-5,3, by = 2)), "tested negative in mc", "tested only in sc", "not tested"),
+  cluster_rows = T, 
+  cluster_cols = F, 
+  clustering_distance_rows = 'euclidean', 
+  clustering_method = 'complete', 
+  show_rownames = F, 
+  angle_col = 45,
+  cellwidth = 40)
+  # cutree_rows = 2)
+
+ggsave(plot = deiod.hmap,
+       units = "in",
+       dpi = 300,
+       width = 5, height = 8,
+       device = "jpg",
+       filename = "./doc/comptox-thyroid-httk/figures/supp/DIO-IYD_invitrodb_v3_5_heatmap.jpg")
+
+```
+
+
