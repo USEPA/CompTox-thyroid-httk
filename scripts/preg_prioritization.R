@@ -2,7 +2,7 @@
 # This script plots the results of
 # applying the full gestational model in httk for IVIVE. 
 # 
-# This script generates Figures 8-10 of Truong et al. 2024.  
+# This script generates Figures 9-10 of Truong et al. 2024.  
 # @author: Kimberly Truong 
 # created: 12/7/23
 # updated: 6/25/24
