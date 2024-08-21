@@ -1,0 +1,1513 @@
+---
+title: "Enrichment Analysis for Deiodinase Activity"
+author: "Kimberly Truong"
+date: '2024-07-19'
+output:
+  html_document:
+    code_folding: hide
+    collapsed: yes
+    df_print: paged
+    lightbox: no
+    number_sections: no
+    self_contained: yes
+    thumbnails: no
+    toc: yes
+    toc_float: yes
+  pdf_document:
+    toc: yes
+---
+
+For full transparency and reproducibility, this Rmd file shows all the enrichment calculations performed and their results for completeness. This can be found as a
+Supplemental File under Truong et al. (in preparation). 
+
+# Data Import and Environment
+
+```{r setup, include = FALSE}
+library(knitr)
+knitr::opts_knit$set(root.dir = 'C:/Users/ktruong/OneDrive - Environmental Protection Agency (EPA)/Profile/Documents/thyroid_prioritization')
+
+```
+
+```{r, warning = FALSE, message = FALSE}
+rm(list=ls())
+library(data.table)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(ggrepel)
+library(ggvenn)
+library(cowplot)
+library(viridis)
+library(RColorBrewer)
+library(colorspace)
+library(scales)
+library(ggpubr)
+library(openxlsx)
+library(readxl)
+
+load('./data/invitrodb_v3_5_thyroid_data.RData', verbose = T)
+
+# processed data - contains data with old classifications (from using ClassyFire alone)
+load('./data/Deiodinases/DIO-IYD_invitrodb_v3_5_qSAR_ready.RData', verbose = T)
+
+# create a `not in` operator
+`%notin%` <- Negate(`%in%`)
+
+```
+
+# Overview of Classes {.tabset .tabset-fade .tabset-pills}
+
+## meta data 
+```{r}
+# DIO/IYD assays
+deiod.meta <- ace.thyroid[thyroid_related_target == 'Deiodinases', 
+                          .(aeid, aenm = assay_component_endpoint_name)]
+
+aenm.abbrevs <- c('DIO1', 'DIO2', 'DIO3', 'IYD')
+
+# ignore amphibian assays 
+h.deiod.aeids <- deiod.meta[grepl("\\w+h(DIO|IYD)\\w+", deiod.meta$aenm), aeid]
+h.deiod.aenm <- deiod.meta[grepl("\\w+h(DIO|IYD)\\w+", deiod.meta$aenm), aenm]
+names(h.deiod.aeids) <- aenm.abbrevs
+names(h.deiod.aenm) <- aenm.abbrevs
+
+```
+
+## Hitcall Distribution 
+```{r}
+# load updated classifications from Richard - 9/5/23
+new.classified <- read_excel(file.path("data", "chemclass level 2.xlsx")) %>% 
+  as.data.table()
+
+# move subset of QACs from "Expert" to "ClassyFire" group
+new.classified[class_type == "Expert" & chosen_class == "Quaternary ammonium salts", class_type := "ClassyFire"]
+
+# subset down to DIO/IYD test chems 
+classified_dt <- new.classified[dtxsid %in% rownames(M.hitc)]
+setnames(classified_dt, "dtxsid", "dsstox_substance_id")
+
+# match chemical order with M.hitc for 1-1 correspondence 
+classified_dt <- classified_dt[match(rownames(M.hitc), classified_dt$dsstox_substance_id), ]
+identical(rownames(M.hitc), classified_dt$dsstox_substance_id)
+
+counts <- classified_dt[, .N, keyby = .(class_type, chosen_class)][
+  order(-N), .SD, keyby = .(class_type)
+]
+
+setDT(long_hitc_final)
+
+# add selectivity as a column to long_hitc_final for better interpretation of hits 
+mc.deiod <- mc5[aeid %in% h.deiod.aeids & !is.na(dsstox_substance_id), .(chnm, aenm, modl_acc, modl_ga), 
+                by = .(aeid, dsstox_substance_id)]
+mc.deiod[is.na(modl_acc), modl_acc := 5]
+mc.deiod$cytomed <- cytotox$cytotox_median_log[match(mc.deiod$dsstox_substance_id, cytotox$dsstox_substance_id)]
+
+# positive controls for DIO2/3/IYD are missing cytotox points 
+mc.deiod[is.na(cytomed)]
+mc.deiod[is.na(cytomed), cytomed := 3]
+mc.deiod[, selectivity := cytomed - pmin(modl_acc, 5)]
+
+```
+
+Impute cytotox median AC50 values for Xanthohumol and 3-Nitro-L-tyrosine to 3 (log10 uM).  
+
+```{r}
+long_hitc_final2 <- merge.data.table(long_hitc_final, 
+                                     mc.deiod[, .(dsstox_substance_id, aenm, modl_acc, modl_ga, selectivity)], 
+                                     by = c("dsstox_substance_id", "aenm"), 
+                                     all.x = T)
+
+# use selectivity as a stricter threshold for hitcall determination 
+long_hitc_final2[selectivity < 0.3, hitc := 0]
+
+# merging hitcalls with class information
+merged_dat <- merge.data.table(long_hitc_final, 
+                               classified_dt[, .(dsstox_substance_id, name, class_type, chosen_class)], 
+                               by = c("dsstox_substance_id"), 
+                               all.x = T)
+
+for (i in 1:length(h.deiod.aenm)) {
+  merged_dat[aenm == h.deiod.aenm[i], assay := names(h.deiod.aenm)[i] ]
+}
+
+# total number of chems tested in each assay (before classification)
+merged_dat[, Nchems := length(dsstox_substance_id), keyby = aenm]
+setnames(merged_dat, "Nchems", "Ntested")
+
+# How many were classified in each assay? should be ALL thx to Richard 
+merged_dat[!is.na(chosen_class), .( Nclassified = length(dsstox_substance_id) ), 
+           keyby = aenm]
+
+# distribution of pos/neg chems with classifications for each assay
+hitc.dist <- merged_dat[, .( numChems = length(dsstox_substance_id) ), 
+           keyby = .(aenm, Ntested, hitc)]
+hitc.dist[, hitrate := numChems/Ntested, by = .(aenm, hitc)]
+hitc.dist
+
+```
+
+100% classified with new classification scheme.
+
+## Class Composition by Assay
+
+The top 25 classes (or groups of classes) for each chemical library are shown here. 
+Classes that made up less than 1% of the library for that assay shown here were regrouped into a broader and related "Other [classes from Classyfire|Drugs|Expert chemicals|Pesticides|PFAS categories]" category. 
+
+``` {r, warning = FALSE, fig.width = 20, fig.height = 14}
+# distribution of classes for test libraries 
+counts.by.aenm <- merged_dat[, .( .N ), keyby = .(aenm, class_type, chosen_class)]
+
+# sorted by counts from highest to lowest, grouped by aenm 
+counts.by.aenm <- counts.by.aenm[order(-N), .SD, by = aenm]
+
+# compute percentages per assay
+counts.by.aenm[, total := sum(N), by = aenm]
+counts.by.aenm[, fraction := N/total, by = .(aenm, chosen_class)]
+
+# for classes with < 1% of chems, group them as 'Other (class_type)'
+other_rows <- counts.by.aenm[fraction < 0.01,
+                             .( chosen_class = paste("Other", class_type, sep = " "),
+                                N = sum(N),
+                                total = .SD[1, total], # denominator stays the same 
+                                fraction = sum(fraction)),
+                             by = .(aenm, class_type)]
+
+# relabel into broader categories
+other_rows[chosen_class == "Other ClassyFire", chosen_class := "Other classes from ClassyFire"]
+other_rows[chosen_class == "Other Pesticide", chosen_class := "Other Pesticides"]
+other_rows[chosen_class == "Other Expert", chosen_class := "Other Expert chemicals"]
+other_rows[chosen_class == "Other Drug", chosen_class := "Other Drugs"]
+other_rows[chosen_class == "Other PFAS", chosen_class := "Other PFAS categories"]
+other_rows[chosen_class == "Other Color", chosen_class := "Other colors"]
+
+# append these rows and resort
+counts.by.aenm <- rbindlist(list(counts.by.aenm, other_rows))
+counts.by.aenm <- counts.by.aenm[order(-N), .SD, keyby = aenm]
+
+# specify hole size for donut chart 
+hsize <- 3 
+counts.by.aenm[, x := hsize]
+counts.by.aenm$aeid <- deiod.meta$aeid[match(counts.by.aenm$aenm, deiod.meta$aenm)]
+
+# collect ggplot objects for ggpubr
+plot_list <- list()
+
+# form palette for top 25 classes from each ae
+classes_to_plot <- counts.by.aenm[1:25, .SD, by = aenm][, unique(chosen_class)]
+n.classes <- length(classes_to_plot)
+class_pal <- c(brewer.pal(n = 12, name = "Set3"), qualitative_hcl(n.classes-12, palette = "set2"))
+
+# to maintain consistent class-to-color map across subplots 
+counts.by.aenm$chosen_class <- as.factor(counts.by.aenm$chosen_class)
+class_pal <- setNames(class_pal, classes_to_plot)
+
+for(i in 1:4) {
+  plot_list[[ names(h.deiod.aeids)[i] ]] <- ggplot(counts.by.aenm[aeid == h.deiod.aeids[i]][1:25], aes(x = hsize, y = fraction, fill = chosen_class)) +
+    geom_col(color = 'black') +
+    geom_label_repel(aes(label = N), 
+                     size = 7, 
+                     position = position_stack(vjust = 0.5),
+                     show.legend = FALSE, 
+                     force_pull = 10) +
+    scale_fill_manual(values = class_pal) +
+    xlim(c(0.2, hsize + 0.5)) +
+    coord_polar(theta = "y") +
+    theme_void() +
+    ggtitle(names(h.deiod.aeids)[i]) +
+    theme(
+      legend.title = element_text(size = 20), 
+      legend.text = element_text(size = 20), 
+      plot.title = element_text(size = 20)
+    )
+}
+
+plot_list[["DIO1"]] <- plot_list[["DIO1"]] + guides(fill = guide_legend(nrow = 9, ncol = 3))
+
+# combine the plots into one figure
+class.comp <- ggarrange(plot_list$DIO1, plot_list$IYD,
+                    plot_list$DIO2, plot_list$DIO3, 
+                    ncol = 2, nrow = 2, 
+                    common.legend = TRUE, 
+                    legend = 'bottom')
+class.comp
+
+ggsave(plot = class.comp,
+       units = "in",
+       dpi = 72,
+       width = 20, height = 14,
+       device = "jpg",
+       filename = "./doc/comptox-thyroid-httk/figures/supp/DIO_IYD_chem_library_composition.jpg")
+``` 
+
+# Class Enrichment {.tabset .tabset-fade .tabset-pills}
+
+## Run Fisher's test for every assay x class 
+``` {r}
+# form hitcall and class matrix 
+M.hitc2 <- M.hitc[, h.deiod.aenm] # take all assay columns 
+M.class <- as.data.frame.matrix(table(classified_dt$dsstox_substance_id, 
+                                           classified_dt$chosen_class))
+
+# check that rows are ordered the same 
+identical(rownames(M.hitc2), rownames(M.class))
+
+RunFisherTests <- function(M.hitc, M.ident, cf_level) {
+  
+  dfList <- list()
+  num.aeids <- ncol(M.hitc)
+  
+  # run tests only on classes of sufficient size (n >= 3)
+  cs = colSums(M.ident)
+  col.ind <- which(cs >= 3)
+  
+  for(i in 1:num.aeids) {
+    dataft <- matrix(NA, ncol = 8, nrow = length(col.ind))
+    
+    for(j in 1:length(col.ind)) {
+      
+      # calculate entries of 2x2 table 
+      a <- sum(M.ident[, col.ind[[j]] ] * M.hitc[, i], na.rm = T)
+      b <- sum(M.ident[, col.ind[[j]] ] * (1 - M.hitc[, i]), na.rm = T)
+      c <- sum( (1 - M.ident[, col.ind[[j]] ]) * M.hitc[, i], na.rm = T)
+      d <- sum( (1 - M.ident[, col.ind[[j]] ]) * (1 - M.hitc[, i]), na.rm = T)
+      
+      tf <- data.frame("active" = c(a,c), "inactive" = c(b, d),
+                       row.names = paste(c('in', 'not in'), cf_level))
+      
+      fttf<- fisher.test(tf)
+      
+      dataft[j,] <- c(fttf$p.value, fttf$estimate, fttf$conf.int, a, b, c, d)
+      
+    }
+    
+    # construct the dataframe for each assay  
+    ft.outputs <- c("Pval","Odds_Ratio","Lower","Upper")
+    ft.cells <- paste0(c('Actives in ', 'Inactives in ', 'Actives not in ', 'Inactives not in '), cf_level)
+    
+    colnames(dataft) <- c(ft.outputs, ft.cells)
+    
+    dataft<-data.frame(dataft, check.names = FALSE)
+    
+    dataft$padj<-p.adjust(dataft$Pval, method="fdr")
+    dataft[, cf_level] <- names(col.ind)
+    
+    dataft <- dataft[, c(1:4,9,10,5:8)]
+    
+    dfList[[i]] <- dataft
+  }
+  
+  # reorder rows by most significant results with OR
+  dfList = lapply(dfList, function(x) arrange(x, padj, desc(Odds_Ratio)))
+  
+  return(dfList)
+}
+
+res <- RunFisherTests(M.hitc2, M.class, 'group')
+
+```
+
+## DIO1
+```{r, echo = FALSE}
+kable(res[[1]], caption = 'For DIO1')
+```
+
+## DIO2
+```{r, echo = FALSE}
+kable(res[[2]], caption = 'For DIO2')
+```
+
+## DIO3
+
+```{r, echo = FALSE}
+kable(res[[3]], caption = 'For DIO3')
+```
+
+## IYD
+```{r, echo = FALSE}
+kable(res[[4]], caption = 'For IYD')
+```
+
+## Supplemental File 2
+```{r}
+# output as Excel table with tabs 
+names(res)  <- aenm.abbrevs
+write.xlsx(res, file = "./doc/comptox-thyroid-httk/tables/Supp2_Class_Enrichment_AllResults.xlsx")
+
+```
+
+## Table 5 of Truong et al.  
+```{r}
+sig.classes <- lapply(res, function(df) {
+  sig <- df %>% 
+    filter(padj < 0.05 & (Odds_Ratio > 3 | Odds_Ratio < 1/3)) %>% 
+    select(Pval, padj, Odds_Ratio, Lower, Upper, group, `Actives in group`, `Inactives in group`)
+})
+
+names(sig.classes) <- aenm.abbrevs
+
+add.assay <- Map(function(df, name) {
+  df$assay <- name
+  df <- df[, c("assay", colnames(df)[colnames(df) != "assay"])]
+  return(df)
+}, sig.classes, names(sig.classes))
+
+tb.paper <- bind_rows(add.assay)
+
+# report pvalues with 2 sigfigs 
+tb.paper[, c("Pval", "padj")] <- signif(tb.paper[, c("Pval", "padj")], digits = 2)
+
+# round other numerical values to 2 digits after decimal pt 
+tb.paper[, c("Odds_Ratio", "Lower", "Upper")] <- round(tb.paper[, c("Odds_Ratio", "Lower", "Upper")], digits = 2)
+kable(tb.paper,  caption = "Summary of Significant Results across all Targets")
+
+```
+
+
+
+# Hits by Target {.tabset .tabset-fade .tabset-pills}
+```{r, message = FALSE, warning = FALSE}
+
+# organize based on odds ratios 
+inf.or <- c("Aryl chlorides", "Fungicide Phthalimide Multi-site activity")
+sig.or <- c("Quaternary ammonium salts", "Herbicide Chloroacetamide Very Long-Chain Fatty Acid Synthesis inhibitor", 
+            "Estrogen nonsteroidal", "Bisphenol", 
+            "Estrogen flavonoid", "Antibiotic polyketide", 
+            "Insecticide Arylalkyl organothiophosphate AChE Inhibitor", 
+            "Herbicide Triazine Inhbition of photosynthesis at PSll", 
+            "Insecticide Chlorinated cyclodiene GABA-gated chloride channel blocker", "PFAAs", 
+            "1-hydroxy-2-unsubstituted benzenoids")
+  
+# helper function to draw the Venn Diagram for an input class 
+# this only counts chemicals that were uniformly tested across all 4 targets 
+#' @hitc.class.dat is a dataframe or (data.table) with columns for DTXSID, classifications, aenm, and hitc
+#' @class_var is the name (of character type) of the column corresponding to classifications
+display_venn <- function(class, hitc.class.dat, class_var) {
+  merged_datw <- dcast(hitc.class.dat, as.formula(paste("dsstox_substance_id +", class_var, "~ aenm")), 
+                       value.var = 'hitc')
+  setDT(merged_datw)
+  merged_datw$name <- classified_dt$name[match(merged_datw$dsstox_substance_id, classified_dt$dsstox_substance_id)]
+  
+  colnames(merged_datw)[colnames(merged_datw)%in% h.deiod.aenm] <- aenm.abbrevs
+  merged_datw[, total_hits := DIO1 + DIO2 + DIO3 + IYD]
+  merged_datw.tested4x <- merged_datw[complete.cases(merged_datw)]
+  
+  class_dat <- merged_datw.tested4x[get(class_var) == class]
+  hit.freqs <- table(class_dat$total_hits)
+  
+  list_venn <- list(DIO1 = class_dat[DIO1 == 1, name], 
+                  DIO2 = class_dat[DIO2 == 1, name], 
+                  DIO3 = class_dat[DIO3 == 1, name], 
+                  IYD = class_dat[IYD == 1, name])
+  
+  venn_obj <- ggvenn(list_venn, 
+       show_percentage = FALSE, 
+       fill_color = c("#0073C2FF", "#EFC000FF", "#868686FF", "#CD534CFF"),
+       text_size = 6) +
+  annotate("text", x = 2, y = -0.5, label = ifelse(!is.na(hit.freqs["0"]), hit.freqs["0"], ""), 
+           size = 6)
+  
+  return(venn_obj)
+}
+
+```
+
+## Odds Ratio == Inf 
+```{r, fig.width = 16, fig.height = 12}
+merged_dat.sel <- merge.data.table(long_hitc_final,
+                        classified_dt[,.(dsstox_substance_id,name,class_type,chosen_class)],
+                               by = c("dsstox_substance_id"),
+                               all.x = T)
+
+infor_list <- lapply(inf.or, display_venn, hitc.class.dat = merged_dat, class_var = "chosen_class")
+names(infor_list) <- inf.or
+
+# combine the plots into one figure
+ggarrange(infor_list$`Aryl chlorides`, infor_list$`Fungicide Phthalimide Multi-site activity`,
+          labels = names(infor_list),
+          font.label = list(size = 18),
+          hjust = -0.25, 
+          label.y = 0.8,
+          nrow = 1, ncol = 2)
+
+```
+
+## Odds Ratio > 3
+```{r, fig.width = 18, fig.height = 25}
+sigor_list <- lapply(sig.or, display_venn, hitc.class.dat = merged_dat, class_var = "chosen_class")
+names(sigor_list) <- sig.or
+
+sig.class.labels <- names(sigor_list)
+
+# combine the plots into one figure
+ggarrange(plotlist = sigor_list, 
+          labels = sig.class.labels,
+          label.y = 0.97,
+          label.x = c(0, -0.20, 0.05, 0.10, 0.05, 0, -0.10, -0.08, -0.15, 0.15, -0.05),
+          hjust = -0.25,
+          nrow = 6, ncol = 2)
+
+```
+
+## Figure 4 of Truong et al. 
+```{r, fig.width = 16, fig.height = 12}
+# focus on triazines and estrogen flavonoids for paper
+flavos.venn <- sigor_list$`Estrogen flavonoid` + 
+  annotate("text", x = 0, y = -2, label = "Estrogen flavonoids",
+            size = 6, fontface= "bold") 
+
+triazine.venn <- sigor_list$`Herbicide Triazine Inhbition of photosynthesis at PSll` +
+  annotate("text", x = 0, y = -2, label = "Herbicide Triazines Inhibition of photosynthesis at PSll",
+            size = 6, fontface= "bold") 
+
+uniq.positives <- ggarrange(flavos.venn, triazine.venn,
+          labels = c("A", "B"),
+          font.label = list(size = 25),
+          label.x = 0,
+          label.y = 0.8,
+          hjust = 0,
+          nrow = 1, ncol = 2)
+
+uniq.positives
+
+ggsave(plot = uniq.positives,
+       units = "in",
+       dpi = 300,
+       width = 15, height = 12,
+       device = "tiff",
+       filename = "./doc/comptox-thyroid-httk/figures/300dpi/uniq_positives.tiff")
+
+ggsave(plot = uniq.positives,
+       units = "in",
+       dpi = 300,
+       width = 15, height = 12,
+       device = "png",
+       filename = "./doc/comptox-thyroid-httk/figures/uniq_positives.png")
+
+```
+
+# Color/Spectral Interference {.tabset .tabset-fade .tabset-pills}
+
+We wish to examine whether there is enriched activity (or inactivity) for specific groups of colored substances (e.g. C.I., FD&C, D&C, based on the specific color). 
+
+## Colors vs. non-colors
+
+Color breakdown in the DIO/IYD testing library. 
+
+```{r}
+is_color <- grepl("\\w+\\s(red|orange|yellow|green|blue|violet|black)\\s*\\w*", classified_dt$name, ignore.case = T)
+classified_dt[!is_color, main_class := chosen_class]
+classified_dt[is_color, main_class := "Colors"]
+
+classified_dt[, new_class := chosen_class]
+
+all_colors <- c("Red", "Orange", "Yellow", "Green", "Blue", "Violet", "Black")
+
+for(k in seq_along(all_colors)) {
+  classified_dt$new_class[which(grepl(paste0("\\w+\\s(", all_colors[k], ")\\s*\\w*"), classified_dt$name, ignore.case = T))] = all_colors[k]
+}
+
+# how many of each specific color 
+classified_dt[main_class == "Colors", .N, by = .(main_class, new_class)]
+
+M.class2 <- as.data.frame.matrix(table(classified_dt$dsstox_substance_id, 
+                                           classified_dt$main_class))
+
+res2 <- RunFisherTests(M.hitc2, M.class2[, "Colors", drop = FALSE], "group")
+names(res2) <- aenm.abbrevs
+
+res2 <- Map(function(df, name) {
+  df$assay <- name
+  df <- df[, c("assay", colnames(df)[colnames(df) != "assay"])]
+  return(df)
+}, res2, names(res2))
+
+all_res <- bind_rows(res2)
+
+```
+
+## Results for colors vs. non-colors
+```{r, echo = FALSE}
+kable(all_res, caption = "For all assays")
+
+new.merged.colors <- merge.data.table(long_hitc_final, 
+                               classified_dt[, .(dsstox_substance_id,class_type,main_class)],
+                               by = c("dsstox_substance_id"), 
+                               all.x = T)
+
+new.merged.colors.sel <- merge.data.table(long_hitc_final2, 
+                               classified_dt[, .(dsstox_substance_id,class_type,main_class)],
+                               by = c("dsstox_substance_id"), 
+                               all.x = T)
+
+# before selectivity filter
+display_venn(class = "Colors", hitc.class.dat = new.merged.colors, class_var = "main_class")
+
+# after selectivity filter 
+display_venn(class = "Colors", hitc.class.dat = new.merged.colors.sel, class_var = "main_class")
+
+```
+
+Venn Diagrams show results before and after applying a "selectivity" filter. 
+
+## Color-specific classes 
+```{r}
+M.class3 <- as.data.frame.matrix(table(classified_dt$dsstox_substance_id, 
+                                           classified_dt$new_class))
+
+res3 <- RunFisherTests(M.hitc2, M.class3[, all_colors], "group")
+names(res3) <- aenm.abbrevs
+
+```
+
+## DIO1
+```{r, echo = FALSE}
+kable(res3$DIO1, caption = 'For DIO1')
+```
+
+## DIO2
+```{r, echo = FALSE}
+kable(res3$DIO2, caption = 'For DIO2')
+```
+
+## DIO3
+```{r, echo = FALSE}
+kable(res3$DIO3, caption = 'For DIO3')
+```
+
+## IYD
+```{r, echo = FALSE}
+kable(res3$IYD, caption = 'For IYD')
+```
+
+```{r, fig.width = 16, fig.height = 8}
+sig.colors <- c("Red", "Blue")
+
+new.merged.colors2 <- merge.data.table(long_hitc_final, 
+                               classified_dt[, .(dsstox_substance_id,class_type,new_class)], 
+                               by = c("dsstox_substance_id"), 
+                               all.x = T)
+
+new.merged.colors2.sel <- merge.data.table(long_hitc_final2, 
+                               classified_dt[, .(dsstox_substance_id,class_type,new_class)], 
+                               by = c("dsstox_substance_id"), 
+                               all.x = T)
+
+# before selectivity filter 
+sig.iyd.colors <- lapply(sig.colors, display_venn, hitc.class.dat = new.merged.colors2, class_var = "new_class")
+names(sig.iyd.colors) <- sig.colors
+
+# combine the plots into one figure
+ggarrange(plotlist = sig.iyd.colors, 
+          labels = names(sig.iyd.colors),
+          font.label = list(size = 20),
+          nrow = 1, ncol = 2)
+
+# after selectivity filter 
+sig.iyd.colors2 <- lapply(sig.colors, display_venn, hitc.class.dat = new.merged.colors2.sel, class_var = "new_class")
+names(sig.iyd.colors2) <- sig.colors
+
+# combine the plots into one figure
+ggarrange(plotlist = sig.iyd.colors2, 
+          labels = names(sig.iyd.colors2),
+          font.label = list(size = 20),
+          nrow = 1, ncol = 2)
+```
+
+Venn Diagrams show results before and after applying a "selectivity" filter.
+
+## Registered classes
+```{r}
+classified_dt[, new_class := chosen_class]
+classified_dt[grep("^[F]*D&C", classified_dt$name), 
+              new_class := "(F)D&C"]
+classified_dt[grep("C.I.", classified_dt$name), new_class := "C.I."]
+
+M.class4 <- as.data.frame.matrix(table(classified_dt$dsstox_substance_id, 
+                                           classified_dt$new_class))
+
+res4 <- RunFisherTests(M.hitc2, M.class4[, c("(F)D&C", "C.I.")], "group")
+names(res4) <- aenm.abbrevs
+
+```
+
+## DIO1
+```{r, echo = FALSE}
+kable(res4$DIO1, caption = 'DIO1: For registered classes')
+```
+
+## DIO2
+```{r, echo = FALSE}
+kable(res4$DIO2, caption = 'DIO2: For registered classes')
+```
+
+## DIO3
+```{r, echo = FALSE}
+kable(res4$DIO3, caption = 'DIO3: For registered classes')
+```
+
+## IYD
+```{r, echo = FALSE, fig.width = 16, fig.height = 9}
+kable(res4$IYD, caption = 'IYD: For registered classes')
+
+sig.classes <- c("(F)D&C", "C.I.")
+
+new.merged.regcolors <- merge.data.table(long_hitc_final, 
+                               classified_dt[, .(dsstox_substance_id,class_type,new_class)], 
+                               by = c("dsstox_substance_id"), 
+                               all.x = T)
+
+new.merged.regcolors.sel <- merge.data.table(long_hitc_final2, 
+                               classified_dt[, .(dsstox_substance_id,class_type,new_class)], 
+                               by = c("dsstox_substance_id"), 
+                               all.x = T)
+
+sig.iyd.classes <- lapply(sig.classes, display_venn, hitc.class.dat = new.merged.regcolors, class_var = "new_class")
+names(sig.iyd.classes) <- sig.classes
+
+# combine the plots into one figure
+ggarrange(plotlist = sig.iyd.classes, 
+          labels = names(sig.iyd.classes),
+          font.label = list(size = 20),
+          nrow = 1, ncol = 2)
+
+sig.iyd.classes2 <- lapply(sig.classes, display_venn, hitc.class.dat = new.merged.regcolors.sel, class_var = "new_class")
+names(sig.iyd.classes2) <- sig.classes
+
+# combine the plots into one figure
+ggarrange(plotlist = sig.iyd.classes2, 
+          labels = names(sig.iyd.classes2),
+          font.label = list(size = 20),
+          nrow = 1, ncol = 2)
+
+```
+
+Venn Diagrams show results before and after applying a "selectivity" filter. 
+
+# ToxPrint Enrichment {.tabset .tabset-fade .tabset-pills}
+
+## load ToxPrints
+```{r}
+toxprints <- fread("./data/Deiodinases/ToxPrints/DIO_IYD_testlib_invitrodb_v3_5_input_toxprints.csv")
+
+# how many chems don't have ToxPrints?
+head(toxprints[cid == ""])
+nrow(toxprints[cid == ""])
+
+```
+82 chemicals did not have ToxPrints because they were either UVCBs or Markush structures. 
+
+## form matrices 
+```{r}
+# subset to available ToxPrints 
+chemotype.cols <- colnames(toxprints)[colnames(toxprints) %notin% c("DTXSID", "smiles", "cid","M_COMPOUND_HISTORY_[STRING]","M_CORINA_SYMPHONY_ERRORS_[STRING]")]
+M.chemotype.dt <- toxprints[cid != "", c("DTXSID", ..chemotype.cols)]
+
+# add chemical names and classifications
+M.chemotype.dt$name <- classified_dt$name[match(M.chemotype.dt$DTXSID, classified_dt$dsstox_substance_id)]
+M.chemotype.dt$chosen_class <- classified_dt$chosen_class[match(M.chemotype.dt$DTXSID, classified_dt$dsstox_substance_id)]
+M.chemotype.dt <- M.chemotype.dt[, c("DTXSID", "name", "chosen_class", chemotype.cols), with = FALSE]
+
+M.chemotype <- as.data.frame(M.chemotype.dt[, c("DTXSID", ..chemotype.cols)])
+rownames(M.chemotype) <- M.chemotype$DTXSID
+M.chemotype <- M.chemotype[, -1]
+
+M.hitc.tp <- M.hitc2[rownames(M.chemotype),]
+
+# check that rows are ordered the same
+identical(rownames(M.hitc.tp), rownames(M.chemotype))
+
+```
+
+## run tests 
+```{r}
+tp.res <- RunFisherTests(M.hitc.tp, M.chemotype, "group")
+
+```
+
+## significant for DIO1
+```{r, echo = FALSE}
+sig.res <- lapply(tp.res, function(df) {
+  sig <- df %>% filter(padj < 0.05 & (Odds_Ratio > 3 | Odds_Ratio < 1/3))
+})
+
+names(sig.res) <- aenm.abbrevs
+kable(sig.res$DIO1, caption = 'For DIO1')
+
+```
+
+## DIO2
+```{r, echo = FALSE}
+kable(sig.res$DIO2, caption = 'For DIO2')
+```
+
+## DIO3
+```{r, echo = FALSE}
+kable(sig.res$DIO3, caption = 'For DIO3')
+```
+
+## IYD
+```{r, echo = FALSE}
+kable(sig.res$IYD, caption = 'For IYD')
+```
+
+## compile results across targets  
+```{r}
+sig.list <- Map(function(df, name) {
+  df$target <- name
+  df <- df[, c("target", "Odds_Ratio", "padj", "group", "Actives in group", "Inactives in group", "Actives not in group", "Inactives not in group")]
+  return(df)
+}, sig.res, names(sig.res))
+
+sig.tp.all <- bind_rows(sig.list)
+setDT(sig.tp.all)
+setnames(sig.tp.all, "group", "chemotype")
+
+M.padj <- as.data.frame(dcast(sig.tp.all, chemotype ~ target, value.var = "padj"))
+rownames(M.padj) <- M.padj$chemotype
+M.padj <- M.padj[, -1]
+
+M.or <- as.data.frame(dcast(sig.tp.all, chemotype ~ target, value.var = "Odds_Ratio"))
+rownames(M.or) <- M.or$chemotype
+M.or <- M.or[, -1]
+
+identical(rownames(M.padj), rownames(M.or))
+cat("Total number of chemotypes found to be significantly enriched: ", length(sig.tp.all$chemotype))
+cat("Total number of unique chemotypes found to be significantly enriched: ", length(unique(rownames(M.padj))))
+
+# enriched for actives = 1; not enriched for actives = 0
+M.active = M.or 
+M.active[M.active > 3] = 1 
+M.active[M.active < 1/3] = 0
+M.active[is.na(M.active)] = 0
+rs.active <- rowSums(M.active)
+M.active <- M.active[rs.active > 0, ]
+rs.active <- rowSums(M.active)
+head(M.active)
+cat("Total number of enriched chemotypes for actives:", nrow(M.active))
+
+
+# enriched for inactives = 1; not enriched for inactives = 0 
+M.inactive = M.or
+M.inactive[M.inactive < 1/3] = 1
+M.inactive[M.inactive > 3] = 0 
+M.inactive[is.na(M.inactive)] = 0 
+rs.inactive <- rowSums(M.inactive)
+M.inactive <- M.inactive[rs.inactive > 0, ]
+rs.inactive <- rowSums(M.inactive)
+M.inactive 
+cat("Total number of enriched chemotypes for inactives:", nrow(M.inactive))
+
+```
+
+* 729 total chemotypes in ToxPrints 
+* A total of 117 chemotypes (77 unique chemotypes) were found to be significant across the assays. 
+  * 72 chemotypes were found to be enriched in the active space. 
+  * 5 chemotypes were found to be enriched in the inactive space. 
+
+
+## pan-active for DIO1/2/3/IYD
+```{r}
+M.active[rs.active == 4, ]
+
+```
+
+## pan-active for 3 targets
+```{r}
+M.active[rs.active == 3, ]
+
+```
+
+## pan-active for 2 targets
+```{r}
+M.active[rs.active == 2, ]
+
+```
+
+## active just for DIO1
+```{r}
+subset(M.active, DIO1 == 1 & DIO2 == 0 & DIO3 == 0 & IYD == 0)
+```
+
+## active just for DIO2
+```{r}
+subset(M.active, DIO1 == 0 & DIO2 == 1 & DIO3 == 0 & IYD == 0)
+```
+
+## active just for DIO3
+```{r}
+subset(M.active, DIO1 == 0 & DIO2 == 0 & DIO3 == 1 & IYD == 0)
+```
+
+## active just for IYD
+```{r}
+subset(M.active, DIO1 == 0 & DIO2 == 0 & DIO3 == 0 & IYD == 1)
+```
+
+# Pan-Activity {.tabset .tabset-fade .tabset-pills}
+
+## calculate selectivity 
+```{r}
+# to select for the most selective hits for each ToxPrints enrichment case
+for (i in 1:length(h.deiod.aenm)) {
+  mc.deiod[aenm == h.deiod.aenm[i], assay := names(h.deiod.aenm)[i] ]
+}
+acc_wide <- dcast(mc.deiod, dsstox_substance_id + chnm ~ assay, value.var = "modl_acc")
+setDT(acc_wide)
+acc_wide$cytomed <- cytotox$cytotox_median_log[match(acc_wide$dsstox_substance_id, cytotox$dsstox_substance_id)]
+acc_wide[is.na(cytomed), cytomed := 3]
+colnames(acc_wide)[3:6] <- paste0(aenm.abbrevs, "_acc")
+
+# probably more concise way to write this but works 
+acc_wide[, DIO1_selectivity := cytomed - pmin(DIO1_acc, 5)]
+acc_wide[, DIO2_selectivity := cytomed - pmin(DIO2_acc, 5)]
+acc_wide[, DIO3_selectivity := cytomed - pmin(DIO3_acc, 5)]
+acc_wide[, IYD_selectivity := cytomed - pmin(IYD_acc, 5)]
+acc_wide[, max_selectivity := pmax(DIO1_selectivity, DIO2_selectivity, DIO3_selectivity, IYD_selectivity, na.rm = T)]
+
+```
+
+## Figure 5 of Truong et al. 
+```{r, fig.width = 10, fig.height = 19}
+sig.chemotypes <- rownames(M.active[rs.active == 4, ])
+tp.sub <- as.data.frame(toxprints[, c("DTXSID", ..sig.chemotypes)])
+rownames(tp.sub) <- tp.sub$DTXSID
+tp.sub <- tp.sub[, -1, drop = FALSE]
+tp.sub <- na.omit(tp.sub)
+
+# get chems that have at least one of the enriched chemotypes 
+chems <- rownames(tp.sub[rowSums(tp.sub) > 0, , drop = FALSE])
+
+# plot the chems with available selectivity (had to be tested in mc)
+# most of these are positive but not all 
+sel.data <- acc_wide[dsstox_substance_id %in% chems, 
+                     .(dsstox_substance_id, chnm, DIO1_acc, DIO2_acc, DIO3_acc, IYD_acc, cytomed, max_selectivity)]
+
+sel.m <- melt.data.table(sel.data, 
+                         measure.vars = c(paste0(aenm.abbrevs, "_acc"), "cytomed"), 
+                         variable.name = "assay", 
+                         value.name = "acc")
+
+sel.m <- sel.m[!is.na(acc)]
+sel.m <- sel.m[order(-max_selectivity, -chnm)]
+
+# standardize themes 
+my_theme <- theme_bw() +
+  theme(axis.text = element_text(size = 10),
+        legend.text = element_text(size = 10))
+
+# SELECTIVITY DOTPLOT
+dotplot <- ggplot(data = sel.m, 
+       mapping = aes(x = reorder(chnm,max_selectivity), 
+                     y = acc)) +
+  geom_point(aes(color = assay, shape = assay), 
+             alpha = 0.8, 
+             size = 2.5) +
+  scale_shape_manual(values = c("DIO1_acc" = 16, "DIO2_acc" = 16, 
+                                "DIO3_acc" = 16, "IYD_acc" = 16,
+                                "cytomed" = 8)) +
+  annotate("rect", xmin = sel.m[max_selectivity < 0.3][1, chnm],
+           xmax = tail(sel.m[max_selectivity < 0.3], n = 1)[, chnm],
+           ymin = floor(min(sel.m$acc)), ymax = ceiling(max(sel.m$acc)),
+           alpha = .1, fill = "red") +
+  my_theme + 
+  labs(x = 'Chemical', y = 'Concentration at Threshold (log uM)') +
+  coord_flip()
+
+# how many of these chems were tested within each assay?
+totals.by.assay <- merged_dat[dsstox_substance_id %in% chems, 
+                     .(total = length(unique(dsstox_substance_id))), by = assay]
+
+testedChems.by.assay <- lapply(aenm.abbrevs, function(ae) {
+  merged_dat[assay == ae & dsstox_substance_id %in% chems, dsstox_substance_id]
+})
+names(testedChems.by.assay) <- aenm.abbrevs
+
+# VENN DIAGRAM OF SUBSTANCES WITH CHEMOTYPE THAT WERE TESTED
+venn_obj <- ggvenn(testedChems.by.assay, 
+       show_percentage = FALSE, 
+       fill_color = c("#999999", "#E69F00", "#56B4E9", "#009E73"),
+       stroke_linetype = "blank", 
+       text_size = 4,
+       set_name_size = 3.8) +
+  scale_y_continuous(expand = expansion(mult = .1)) # fix labels cropped at the top with this ggplot trick
+
+# class x hitc distribution of these chems 
+actives <- merged_dat[dsstox_substance_id %in% chems & hitc == 1, 
+  .(count = length(unique(dsstox_substance_id))), 
+  by = .(assay, class_type, chosen_class)]
+actives[, hitcall := "active"]
+
+inactives <- merged_dat[dsstox_substance_id %in% chems & hitc == 0, 
+  .(count = length(unique(dsstox_substance_id))), 
+  by = .(assay, class_type, chosen_class)]
+inactives[, hitcall := "inactive"]
+
+class.hitc.dist <- setDT(bind_rows(actives, inactives))
+
+# add stats pertaining to each assay
+for (i in 1:length(h.deiod.aenm)) {
+  class.hitc.dist[assay == aenm.abbrevs[i], `:=` (
+    Nactives = hitc.dist[aenm == h.deiod.aenm[i] & hitc == 1, numChems], # total num of actives in that assay
+    Ninactives = hitc.dist[aenm == h.deiod.aenm[i] & hitc == 0, numChems], # total num of inactives in that assay
+    Nchemotypes = totals.by.assay[assay == aenm.abbrevs[i], total] # total num of chems described by the chemotypes of interest in each assay
+)]}
+
+class.hitc.dist[hitcall == "active", `:=` (pct = (count/Nactives)*100, 
+                                    pct_of_Nchemotypes = (count/Nchemotypes)*100
+)]
+
+class.hitc.dist[hitcall == "inactive", `:=` (pct = (count/Ninactives)*100, 
+                                    pct_of_Nchemotypes = (count/Nchemotypes)*100
+)]
+class.hitc.dist <- class.hitc.dist[order(-pct_of_Nchemotypes), .SD, keyby = .(assay, hitcall)]
+
+# CLASS DISTRIBUTION OF CHEMS WITH CHEMOTYPE(S)
+barchart <- ggplot(class.hitc.dist, 
+       aes(x= reorder(chosen_class, pct_of_Nchemotypes),  
+           y=pct_of_Nchemotypes, fill=chosen_class)) +
+  geom_bar(stat="identity") +
+  my_theme +
+  theme(legend.position = "none", 
+       plot.title.position = "plot", 
+       plot.title = element_text(hjust = 0.15, vjust = 0.6)) +
+  coord_flip() +
+  facet_grid(hitcall ~ assay, scales = "free_y") +
+  labs(x = "Class", 
+       y = "% of Chemicals with Given Chemotype(s) found Active or Inactive for Target", 
+       title = "Class Distribution of Chemicals with chain:alkaneLinear_C(8,10,12,14) chemotype")
+
+class.hitc.dist[hitcall == "active", total_pct := sum(pct), by = assay]
+
+pct.of.actives.per.assay <- unique(class.hitc.dist[!is.na(total_pct), .(total_pct, assay)])
+pct.of.actives.per.assay[, in_group := T]
+
+other.actives <- pct.of.actives.per.assay %>% 
+  arrange(assay) %>%
+  mutate(total_pct = 100-total_pct, 
+         in_group = FALSE)
+
+active.pie <- rbind(pct.of.actives.per.assay, other.actives)
+
+# compute the position of labels
+active.pie <- active.pie %>% 
+  arrange(assay, desc(in_group)) %>%
+  mutate(ypos = cumsum(total_pct)- 0.5*total_pct)
+
+# % OF ACTIVES AS A PIECHART 
+piechart <- ggplot(active.pie, 
+                   aes(x="", y=total_pct, fill = in_group)) +
+  geom_bar(stat="identity", width = 1, color = "black") +
+  coord_polar("y", start=0) +
+  ylim(0, 100) +
+  scale_fill_discrete(name = "", 
+                      labels = c("Actives not represented by chemotypes", "Actives represented by chemotypes")) +
+  facet_wrap(~ assay, nrow =  1) +
+  geom_text(aes(x = 1.25, label = ifelse(in_group, paste0(round(total_pct, digits = 1), "%"), "")),
+            color = "black", size = 13/.pt, 
+            position = position_stack(vjust = 0.5)) +
+  theme_void() + 
+  theme(legend.position = "bottom",
+        legend.text = element_text(size = 12), 
+        text = element_text(size = 14), 
+        plot.margin = unit(c(1,0.5,0,0.5), "lines")) 
+
+aplusb <- plot_grid(piechart, NULL, venn_obj, rel_heights = c(1,1,1), 
+                    rel_widths = c(0.7, 0.05, 0.3),
+                    nrow = 1, 
+                    labels = c("A", "B"), 
+                    label_x = 0, label_y = 0.8, label_size = 20)
+
+cplusd <- plot_grid(barchart, dotplot, rel_heights = c(1.4, 1), 
+                    rel_widths = c(1, 0.5), 
+                    nrow = 2, 
+                    labels = c("C", "D"), 
+                    label_x = 0, label_y = 1, label_size = 20)
+
+fig <- plot_grid(aplusb, cplusd,
+          rel_heights = c(0.2, 0.8), rel_widths = c(1,1), nrow = 2)
+
+fig
+
+ggsave(plot = fig, 
+       units = "in", 
+       dpi = 300, 
+       width = 10, height = 19, 
+       device = "tiff", 
+       filename = "./doc/comptox-thyroid-httk/figures/300dpi/longchainc_panactive.tiff")
+
+ggsave(plot = fig, 
+       units = "in", 
+       dpi = 300, 
+       width = 10, height = 19, 
+       device = "png", 
+       filename = "./doc/comptox-thyroid-httk/figures/longchainc_panactive.png")
+
+```
+
+## function to make plots for each ToxPrint grouping 
+```{r}
+make_plots <- function(chemotypes, piechart.actives = T) {
+  tp.sub <- as.data.frame(toxprints[, c("DTXSID", ..chemotypes)])
+  rownames(tp.sub) <- tp.sub$DTXSID
+  tp.sub <- tp.sub[, -1, drop = FALSE]
+  tp.sub <- na.omit(tp.sub)
+  
+  # get chems that have at least one of the enriched chemotypes 
+  chems <- rownames(tp.sub[rowSums(tp.sub) > 0, , drop = FALSE])
+  
+  # plot the chems with available selectivity (had to be tested in mc)
+  # most of these are positive but not all 
+  sel.data <- acc_wide[dsstox_substance_id %in% chems, 
+                       .(dsstox_substance_id, chnm, DIO1_acc, DIO2_acc, DIO3_acc, IYD_acc, cytomed, max_selectivity)]
+  
+  sel.m <- melt.data.table(sel.data, 
+                           measure.vars = c(paste0(aenm.abbrevs, "_acc"), "cytomed"), 
+                           variable.name = "assay", 
+                           value.name = "acc")
+  
+  sel.m <- sel.m[!is.na(acc)]
+  sel.m <- sel.m[order(-max_selectivity, -chnm)]
+  
+  # standardize themes 
+  my_theme <- theme_bw() +
+    theme(axis.text = element_text(size = 10),
+          legend.text = element_text(size = 10))
+  
+  # SELECTIVITY DOTPLOT
+  dotplot <- ggplot(data = sel.m, 
+         mapping = aes(x = reorder(chnm,max_selectivity), 
+                       y = acc)) +
+    geom_point(aes(color = assay, shape = assay), 
+               alpha = 0.8, 
+               size = 2.5) +
+    scale_shape_manual(values = c("DIO1_acc" = 16, "DIO2_acc" = 16, 
+                                  "DIO3_acc" = 16, "IYD_acc" = 16,
+                                  "cytomed" = 8)) +
+    annotate("rect", xmin = sel.m[max_selectivity < 0.3][1, chnm],
+             xmax = tail(sel.m[max_selectivity < 0.3], n = 1)[, chnm],
+             ymin = floor(min(sel.m$acc)), ymax = ceiling(max(sel.m$acc)),
+             alpha = .1, fill = "red") +
+    my_theme + 
+    labs(x = 'Chemical', y = 'Concentration at Threshold (log uM)') +
+    coord_flip()
+  
+  # how many of these chems were tested within each assay?
+  totals.by.assay <- merged_dat[dsstox_substance_id %in% chems, 
+                       .(total = length(unique(dsstox_substance_id))), by = assay]
+  
+  testedChems.by.assay <- lapply(aenm.abbrevs, function(ae) {
+    merged_dat[assay == ae & dsstox_substance_id %in% chems, dsstox_substance_id]
+  })
+  names(testedChems.by.assay) <- aenm.abbrevs
+  
+  # VENN DIAGRAM OF SUBSTANCES WITH CHEMOTYPE THAT WERE TESTED
+  venn_obj <- ggvenn(testedChems.by.assay, 
+         show_percentage = FALSE, 
+         fill_color = c("#999999", "#E69F00", "#56B4E9", "#009E73"),
+         stroke_linetype = "blank", 
+         text_size = 4,
+         set_name_size = 3.8) +
+    scale_y_continuous(expand = expansion(mult = .1))
+  
+  # class x hitc distribution of these chems 
+  actives <- merged_dat[dsstox_substance_id %in% chems & hitc == 1, 
+    .(count = length(unique(dsstox_substance_id))), 
+    by = .(assay, class_type, chosen_class)]
+  actives[, hitcall := "active"]
+  
+  inactives <- merged_dat[dsstox_substance_id %in% chems & hitc == 0, 
+    .(count = length(unique(dsstox_substance_id))), 
+    by = .(assay, class_type, chosen_class)]
+  inactives[, hitcall := "inactive"]
+  
+  class.hitc.dist <- setDT(bind_rows(actives, inactives))
+  
+  # add stats pertaining to each assay
+  for (i in 1:length(h.deiod.aenm)) {
+    class.hitc.dist[assay == aenm.abbrevs[i], `:=` (
+      Nactives = hitc.dist[aenm == h.deiod.aenm[i] & hitc == 1, numChems], # total num of actives in that assay
+      Ninactives = hitc.dist[aenm == h.deiod.aenm[i] & hitc == 0, numChems], # total num of inactives in that assay
+      Nchemotypes = totals.by.assay[assay == aenm.abbrevs[i], total] # total num of chems described by the chemotypes of interest in each assay
+  )]}
+  
+  class.hitc.dist[hitcall == "active", `:=` (pct = (count/Nactives)*100, 
+                                      pct_of_Nchemotypes = (count/Nchemotypes)*100
+  )]
+  
+  class.hitc.dist[hitcall == "inactive", `:=` (pct = (count/Ninactives)*100, 
+                                      pct_of_Nchemotypes = (count/Nchemotypes)*100
+  )]
+  class.hitc.dist <- class.hitc.dist[order(-pct_of_Nchemotypes), .SD, keyby = .(assay, hitcall)]
+  
+  # CLASS DISTRIBUTION OF CHEMS WITH CHEMOTYPE(S)
+  barchart <- ggplot(class.hitc.dist, 
+         aes(x= reorder(chosen_class, pct_of_Nchemotypes),  
+             y=pct_of_Nchemotypes, fill=chosen_class)) +
+    geom_bar(stat="identity") +
+    my_theme +
+    theme(legend.position = "none", 
+         plot.title.position = "plot", 
+         plot.title = element_text(hjust = 0.15, vjust = 0.6)) +
+    coord_flip() +
+    facet_grid(hitcall ~ assay, scales = "free_y") +
+    labs(x = "Class", 
+         y = "% of Chemicals with Given Chemotype(s) found Active or Inactive for Target", 
+         title = "Class Distribution of Chemicals with Chemotype(s)")
+  
+  if (piechart.actives) {
+    class.hitc.dist[hitcall == "active", total_pct := sum(pct), by = assay]
+  }
+  else {
+    class.hitc.dist[hitcall == "inactive", total_pct := sum(pct), by = assay]
+  }
+  
+  pie.per.assay <- unique(class.hitc.dist[!is.na(total_pct), .(total_pct, assay)])
+  pie.per.assay[, in_group := T]
+  
+  other.chunk <- pie.per.assay %>% 
+    arrange(assay) %>%
+    mutate(total_pct = 100-total_pct, 
+           in_group = FALSE)
+  
+  pie.data <- rbind(pie.per.assay, other.chunk)
+  
+  # compute the position of labels
+  pie.data <- pie.data %>% 
+    arrange(assay, desc(in_group)) %>%
+    mutate(ypos = cumsum(total_pct)- 0.5*total_pct)
+  
+  # % OF ACTIVES or INACTIVES AS A PIECHART 
+  if (piechart.actives) {
+    key.labels <- c("Actives not represented by chemotypes", "Actives represented by chemotypes")
+  } else {
+    key.labels <- c("Inactives not represented by chemotypes", "Inactives represented by chemotypes")
+  }
+  piechart <- ggplot(pie.data, 
+                     aes(x="", y=total_pct, fill = in_group)) +
+    geom_bar(stat="identity", width = 1, color = "black") +
+    coord_polar("y", start=0) +
+    ylim(0, 100) +
+    scale_fill_discrete(name = "", 
+                        labels = key.labels) +
+    facet_wrap(~ assay, nrow =  1) +
+    geom_text(aes(x = 1.25, label = ifelse(in_group, paste0(round(total_pct, digits = 1), "%"), "")),
+              color = "black", size = 13/.pt, 
+              position = position_stack(vjust = 0.5)) +
+    theme_void() + 
+    theme(legend.position = "bottom",
+          legend.text = element_text(size = 12), 
+          text = element_text(size = 14), 
+          plot.margin = unit(c(1,0.5,0,0.5), "lines")) 
+  
+  aplusb <- plot_grid(piechart, NULL, venn_obj, rel_heights = c(1,1,1), 
+                      rel_widths = c(0.7, 0.05, 0.3),
+                      nrow = 1, 
+                      labels = c("A", "B"), 
+                      label_x = 0, label_y = 0.8, label_size = 20)
+  
+  cplusd <- plot_grid(barchart, dotplot, rel_heights = c(1.4, 1), 
+                      rel_widths = c(1, 0.5), 
+                      nrow = 2, 
+                      labels = c("C", "D"), 
+                      label_x = 0, label_y = 1, label_size = 20)
+  
+  fig <- plot_grid(aplusb, cplusd,
+            rel_heights = c(0.2, 0.8), rel_widths = c(1,1), nrow = 2)
+  
+  return(fig)
+
+}
+
+```
+
+## bond:C(~Z)~C~Q_a-halocarbonyl (enriched for DIO1-3)
+```{r, fig.width = 10, fig.height = 19}
+ahalo.res <- make_plots(c("bond:C(~Z)~C~Q_a-halocarbonyl"))
+ahalo.res
+
+```
+
+## chain:alkeneLinear_[mono-ene|diene]_* (enriched for DIO1-3)
+```{r, fig.width = 10, fig.height = 19}
+alk.lin.group <- rownames(M.active[rs.active == 3, ])[3:6]
+alk.lin.res <- make_plots(alk.lin.group)
+alk.lin.res
+
+```
+
+## bond:CX_halide_alkyl-F_perfluoro_octyl (enriched for DIO1/2/IYD)
+```{r, fig.width = 10, fig.height = 19}
+halide.res <- make_plots(c("bond:CX_halide_alkyl-F_perfluoro_octyl"))
+halide.res
+
+```
+
+## chain:aromaticAlkene_Ph-C2_acyclic_generic (enriched for DIO2/3/IYD)
+```{r, fig.width = 10, fig.height = 19}
+arom.alk.res <- make_plots(c("chain:aromaticAlkene_Ph-C2_acyclic_generic"))
+arom.alk.res
+
+```
+
+## chain:aromaticAlkane_Ph-C6 (enriched for DIO1/2/IYD)
+```{r, fig.width = 10, fig.height = 14}
+arom.alk.c6 <- make_plots(c("chain:aromaticAlkane_Ph-C6"))
+arom.alk.c6
+
+```
+
+
+## chain:alkene[Branch|Linear]_mono-ene_* (enriched for DIO2/3)
+
+```{r, fig.width = 10, fig.height = 30}
+mono.ene.group <- rownames(M.active[rs.active == 2, ])[4:6]
+mono.ene.res <- make_plots(mono.ene.group)
+mono.ene.res
+
+```
+
+## chain:aromaticAlkene_Ph-C2_(styrene)* (enriched for DIO2/3)
+```{r, fig.width = 10, fig.height = 19}
+ring.ph.c2 <- rownames(M.active[rs.active == 2, ])[10:11]
+ring.phc2.res <- make_plots(ring.ph.c2)
+ring.phc2.res
+
+```
+
+## bond:quatN_alkyl_acyclic (enriched for DIO1/IYD)
+```{r, fig.width = 10, fig.height = 12}
+quatN.res <- make_plots(c("bond:quatN_alkyl_acyclic"))
+quatN.res
+
+```
+
+## bond:CC(=O)C_ketone_alkene_cyclic_3-en-1-one (enriched for DIO1/3)
+```{r, fig.width = 10, fig.height = 12}
+ketone.alk.res <- make_plots(c("bond:CC(=O)C_ketone_alkene_cyclic_3-en-1-one"))
+ketone.alk.res
+
+```
+
+## chain:aromaticAlkane_[Ar|Ph]-C(1)*-[Ar|Ph] (enriched for DIO2/IYD)
+```{r, fig.width = 10, fig.height = 19}
+arom.alk.xcx.group <- rownames(M.active[rs.active == 2, ])[7:8]
+arom.alk.XCX.res <- make_plots(arom.alk.xcx.group)
+arom.alk.XCX.res
+
+```
+
+## chain:alkaneLinear_hexadecyl_C16 (enriched for DIO2/IYD)
+```{r, fig.width = 10, fig.height = 12}
+longc16.res <- make_plots("chain:alkaneLinear_hexadecyl_C16")
+longc16.res
+
+```
+
+# Enriched just for DIO1 {.tabset .tabset-fade .tabset-pills}
+
+## bond:CC(=O)C_ketone_aromatic_aliphatic
+```{r, fig.width = 10, fig.height = 19}
+ketone.dio1.res <- make_plots(c("bond:CC(=O)C_ketone_aromatic_aliphatic"))
+ketone.dio1.res
+
+```
+
+## bond:[CO(C|H)]_[ether|alcohol]_[alkenyl|alkene]_*
+```{r, fig.width = 10, fig.height = 19}
+alcoh.ethers <- rownames(subset(M.active, DIO1 == 1 & DIO2 == 0 & DIO3 == 0 & IYD == 0))[2:4]
+
+alcohol.res <- make_plots(alcoh.ethers)
+alcohol.res
+
+```
+
+## bond:[CS|P~S|S~N]_[sulfide|generic]
+```{r, fig.width = 10, fig.height = 40}
+bonds.w.sulfur <- rownames(subset(M.active, DIO1 == 1 & DIO2 == 0 & DIO3 == 0 & IYD == 0))[c(5,7,8)]
+
+sulfur.res <- make_plots(bonds.w.sulfur)
+sulfur.res
+
+```
+
+## ring:hetero_[6_6]_O_benzopyrone_(1_4-)
+
+```{r, fig.width = 10, fig.height = 14}
+ring.dio1.res <- make_plots(c("ring:hetero_[6_6]_O_benzopyrone_(1_4-)", "ring:hetero_[6_6]_O_benzopyran"))
+ring.dio1.res
+
+```
+
+## bond:P=O_phosphate_thioate
+```{r, fig.width = 10, fig.height = 12}
+thioate.res <- make_plots(c("bond:P=O_phosphate_thioate"))
+thioate.res
+
+```
+
+
+# DIO2 {.tabset .tabset-fade .tabset-pills}
+
+## chain:alkeneLinear_diene_1_4-diene
+```{r, fig.width = 12, fig.height = 14}
+chain.dio2.res <- make_plots(c("chain:alkeneLinear_diene_1_4-diene"))
+chain.dio2.res
+
+```
+
+# DIO3 {.tabset .tabset-fade .tabset-pills}
+
+## Carbonyls 
+```{r, fig.width = 10, fig.height = 25}
+carbonyls <- c("bond:C=O_carbonyl_ab-unsaturated_aliphatic_(michael_acceptors)", 
+               "bond:CC(=O)C_ketone_alkene_generic", 
+               "chain:alkeneCyclic_ethene_C_(connect_noZ)")
+
+carbonyl.res <- make_plots(carbonyls)
+carbonyl.res
+
+```
+
+## Cyclohexenes 
+```{r, fig.width = 10, fig.height = 19}
+cyclohexenes <- c("bond:CC(=O)C_ketone_alkene_cyclic_(C6)", 
+                  "chain:alkeneCyclic_diene_cyclohexene")
+
+cyclohex.res <- make_plots(cyclohexenes)
+cyclohex.res
+
+```
+
+## bond:CN_amine_sec-NH_aromatic_aliphatic
+```{r, fig.width = 10, fig.height = 14}
+amine.res <- make_plots(c("bond:CN_amine_sec-NH_aromatic_aliphatic"))
+amine.res
+
+```
+
+## ring:hetero_[6]_N_triazine_(1_3_5-)
+```{r, fig.width = 10, fig.height = 14}
+triazine.res <- make_plots(c("ring:hetero_[6]_N_triazine_(1_3_5-)"))
+triazine.res
+
+```
+
+## bond:CS_sulfide_di-
+```{r, fig.width = 10, fig.height = 14}
+disulfur.res <- make_plots("bond:CS_sulfide_di-")
+disulfur.res
+
+```
+
+# IYD {.tabset .tabset-fade .tabset-pills}
+
+## Halides
+```{r, fig.width = 10, fig.height = 19}
+halides <- rownames(subset(M.active, DIO1 == 0 & DIO2 == 0 & DIO3 == 0 & IYD == 1))[c(4,5,8,9)]
+halide.iyd.res <- make_plots(halides)
+halide.iyd.res
+
+```
+
+## bond:CX_halide_alkyl-Cl_dichloro_(1_1-)
+```{r, fig.width = 10, fig.height = 19}
+dichloro.res <- make_plots(c("bond:CX_halide_alkyl-Cl_dichloro_(1_1-)"))
+dichloro.res
+
+```
+## bond:CX_halide_alkyl-F_perfluoro_hexyl
+```{r, fig.width = 10, fig.height = 14}
+perfluoro.res <- make_plots("bond:CX_halide_alkyl-F_perfluoro_hexyl")
+perfluoro.res
+
+```
+
+## bond:COH_alcohol_aromatic_[phenol]*
+```{r, fig.width = 10, fig.height = 30}
+alcoh.arom.res <- make_plots(c("bond:COH_alcohol_aromatic", 
+                               "bond:COH_alcohol_aromatic_phenol"))
+alcoh.arom.res
+
+```
+
+## bond:N=N_azo_[aromatic|generic]
+```{r, fig.width = 10, fig.height = 14}
+azo.res <- make_plots(c("bond:N=N_azo_aromatic", 
+                        "bond:N=N_azo_generic"))
+azo.res
+
+```
+
+## bond:QQ(Q~O_S)_sulfur_oxide
+```{r, fig.width = 10, fig.height = 19}
+sulf.oxide.res <- make_plots(c("bond:QQ(Q~O_S)_sulfur_oxide"))
+sulf.oxide.res
+
+```
+
+## bond:S(=O)_sulfon^
+``` {r, fig.width = 10, fig.height = 19}
+sulfons <- rownames(subset(M.active, DIO1 == 0 & DIO2 == 0 & DIO3 == 0 & IYD == 1))[13:15]
+
+sulfon.res <- make_plots(sulfons)
+sulfon.res
+
+```
+
+## sulfonic Esters 
+```{r, fig.width = 10, fig.height = 12}
+sulf.esters <- rownames(subset(M.active, DIO1 == 0 & DIO2 == 0 & DIO3 == 0 & IYD == 1))[16:18]
+
+sulf.est.res <- make_plots(sulf.esters)
+sulf.est.res
+
+```
+
+## ring:fused_[6_6]_naphthalene
+```{r, fig.width = 10, fig.height = 19}
+db.ring <- make_plots(c("ring:fused_[6_6]_naphthalene"))
+db.ring
+
+```
+
+## bond:quatN_generic
+```{r, fig.width = 10, fig.height = 14}
+quat.res <- make_plots("bond:quatN_generic")
+quat.res
+
+```
+
+## bond:C=N_imine_N(connect_noZ)
+```{r, fig.width = 10, fig.height = 19}
+imine.res <- make_plots("bond:C=N_imine_N(connect_noZ)")
+imine.res
+
+```
+
+# Inactives {.tabset .tabset-fade .tabset-pills}
+
+## bond:COH_alcohol_pri-alkyl
+```{r, fig.width = 10, fig.height = 19}
+dio1.inactive <- make_plots(c("bond:COH_alcohol_pri-alkyl"), piechart.actives = F)
+dio1.inactive
+
+```
+
+## how many of these chems have the enriched chemotypes for actives? 
+```{r}
+enriched.active.ct <- c("chain:alkaneLinear_decyl_C10", 
+                        "chain:alkaneLinear_dodedyl_C12", 
+                        "chain:alkaneLinear_octyl_C8", 
+                        "chain:alkaneLinear_tetradecyl_C14", 
+                        "chain:alkeneBranch_mono-ene_2-butene", 
+                        "chain:alkeneLinear_mono-ene_allyl", 
+                        "chain:alkeneLinear_mono-ene_ethylene_generic")
+```
+
+## chain:oxy-alkaneLinear_ethyleneOxide_EO1
+```{r, fig.width = 10, fig.height = 19}
+dio3.inactive <- make_plots(c("chain:oxy-alkaneLinear_ethyleneOxide_EO1"), 
+                            piechart.actives = F)
+dio3.inactive
+
+```
