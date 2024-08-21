@@ -31,11 +31,8 @@ knitr::opts_knit$set(root.dir = 'C:/Users/ktruong/OneDrive - Environmental Prote
 ```{r, warning = FALSE, message = FALSE}
 rm(list=ls())
 library(data.table)
-library(tcpl)
 library(dplyr)
 library(tidyr)
-library(readxl)
-library(writexl)
 library(ggplot2)
 library(ggrepel)
 library(ggvenn)
@@ -45,6 +42,8 @@ library(RColorBrewer)
 library(colorspace)
 library(scales)
 library(ggpubr)
+library(openxlsx)
+library(readxl)
 
 load('./data/invitrodb_v3_5_thyroid_data.RData', verbose = T)
 
@@ -922,7 +921,7 @@ venn_obj <- ggvenn(testedChems.by.assay,
        stroke_linetype = "blank", 
        text_size = 4,
        set_name_size = 3.8) +
-  theme(plot.margin = unit(c(1,0.5,0,0.5), "lines"))
+  scale_y_continuous(expand = expansion(mult = .1)) # fix labels cropped at the top with this ggplot trick
 
 # class x hitc distribution of these chems 
 actives <- merged_dat[dsstox_substance_id %in% chems & hitc == 1, 
@@ -1100,7 +1099,7 @@ make_plots <- function(chemotypes, piechart.actives = T) {
          stroke_linetype = "blank", 
          text_size = 4,
          set_name_size = 3.8) +
-    theme(plot.margin = unit(c(1,0.5,0,0.5), "lines"))
+    scale_y_continuous(expand = expansion(mult = .1))
   
   # class x hitc distribution of these chems 
   actives <- merged_dat[dsstox_substance_id %in% chems & hitc == 1, 
