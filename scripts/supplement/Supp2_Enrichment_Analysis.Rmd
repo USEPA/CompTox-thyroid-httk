@@ -24,7 +24,7 @@ Supplemental File under Truong et al. (in preparation).
 
 ```{r setup, include = FALSE}
 library(knitr)
-knitr::opts_knit$set(root.dir = 'C:/Users/ktruong/OneDrive - Environmental Protection Agency (EPA)/Profile/Documents/thyroid_prioritization')
+knitr::opts_knit$set(root.dir = 'C:/Users/ktruong/OneDrive - Environmental Protection Agency (EPA)/Profile/Documents/thyroid_prioritization/doc/comptox-thyroid-httk')
 
 ```
 
@@ -46,9 +46,6 @@ library(openxlsx)
 library(readxl)
 
 load('./data/invitrodb_v3_5_thyroid_data.RData', verbose = T)
-
-# processed data - contains data with old classifications (from using ClassyFire alone)
-load('./data/Deiodinases/DIO-IYD_invitrodb_v3_5_qSAR_ready.RData', verbose = T)
 
 # create a `not in` operator
 `%notin%` <- Negate(`%in%`)
@@ -73,10 +70,44 @@ names(h.deiod.aenm) <- aenm.abbrevs
 
 ```
 
+## Hitcall Matrix 
+```{r}
+# get hitcall data from sc/mc for DIO/IYD assays 
+long.mc5 <- mc5[!is.na(dsstox_substance_id) & aeid %in% h.deiod.aeids, 
+                .(dsstox_substance_id, aenm, hitc)]
+long.sc2 <- sc2[!is.na(dsstox_substance_id) & aeid %in% h.deiod.aeids, 
+                .(dsstox_substance_id, aenm, hitc)]
+
+# combine mc/sc data
+long_all <- merge.data.table(long.sc2, long.mc5, 
+                             by = c("dsstox_substance_id", "aenm"), 
+                             all = T)
+setnames(long_all, old = c("hitc.x", "hitc.y"), 
+         new = c("sc.hitc", "mc.hitc"))
+
+# if tested in both, take hitc from mc; otherwise, take hitc from sc 
+long_hitc_final <- long_all %>% 
+  rowwise() %>%
+  mutate(hitc = ifelse(!is.na(mc.hitc), mc.hitc, sc.hitc))
+
+# form a hitcall matrix of all 2007 tested chems 
+M.hitc <- long_hitc_final %>% 
+  select(dsstox_substance_id, aenm, hitc) %>% 
+  pivot_wider(names_from = aenm, values_from = hitc) %>% 
+  as.data.frame()
+
+M.hitc$chnm <- sc2$chnm[match(M.hitc$dsstox_substance_id, sc2$dsstox_substance_id)]
+M.hitc <- M.hitc[, c("dsstox_substance_id", "chnm", h.deiod.aenm)]
+
+row.names(M.hitc) <- M.hitc$dsstox_substance_id
+M.hitc <- M.hitc[, -1]
+
+```
+
 ## Hitcall Distribution 
 ```{r}
 # load updated classifications from Richard - 9/5/23
-new.classified <- read_excel(file.path("data", "chemclass level 2.xlsx")) %>% 
+new.classified <- read_excel(file.path("./data", "chem_classifications.xlsx")) %>% 
   as.data.table()
 
 # move subset of QACs from "Expert" to "ClassyFire" group
@@ -231,12 +262,13 @@ class.comp <- ggarrange(plot_list$DIO1, plot_list$IYD,
                     legend = 'bottom')
 class.comp
 
-ggsave(plot = class.comp,
-       units = "in",
-       dpi = 72,
-       width = 20, height = 14,
-       device = "jpg",
-       filename = "./doc/comptox-thyroid-httk/figures/supp/DIO_IYD_chem_library_composition.jpg")
+# ggsave(plot = class.comp,
+#        units = "in",
+#        dpi = 72,
+#        width = 20, height = 14,
+#        device = "jpg",
+#        filename = "./doc/comptox-thyroid-httk/figures/supp/DIO_IYD_chem_library_composition.jpg")
+
 ``` 
 
 # Class Enrichment {.tabset .tabset-fade .tabset-pills}
@@ -331,7 +363,7 @@ kable(res[[4]], caption = 'For IYD')
 ```{r}
 # output as Excel table with tabs 
 names(res)  <- aenm.abbrevs
-write.xlsx(res, file = "./doc/comptox-thyroid-httk/tables/Supp2_Class_Enrichment_AllResults.xlsx")
+write.xlsx(res, file = "./tables/Supp2_Class_Enrichment_AllResults.xlsx")
 
 ```
 
@@ -474,14 +506,14 @@ ggsave(plot = uniq.positives,
        dpi = 300,
        width = 15, height = 12,
        device = "tiff",
-       filename = "./doc/comptox-thyroid-httk/figures/300dpi/uniq_positives.tiff")
+       filename = "./figures/300dpi/uniq_positives.tiff")
 
 ggsave(plot = uniq.positives,
        units = "in",
        dpi = 300,
        width = 15, height = 12,
        device = "png",
-       filename = "./doc/comptox-thyroid-httk/figures/uniq_positives.png")
+       filename = "./figures/uniq_positives.png")
 
 ```
 
@@ -687,7 +719,7 @@ Venn Diagrams show results before and after applying a "selectivity" filter.
 
 ## load ToxPrints
 ```{r}
-toxprints <- fread("./data/Deiodinases/ToxPrints/DIO_IYD_testlib_invitrodb_v3_5_input_toxprints.csv")
+toxprints <- fread("./data/DIO_IYD_testlib_invitrodb_v3_5_input_toxprints.csv")
 
 # how many chems don't have ToxPrints?
 head(toxprints[cid == ""])
@@ -875,11 +907,11 @@ tp.sub <- tp.sub[, -1, drop = FALSE]
 tp.sub <- na.omit(tp.sub)
 
 # get chems that have at least one of the enriched chemotypes 
-chems <- rownames(tp.sub[rowSums(tp.sub) > 0, , drop = FALSE])
+longchainc.chems <- rownames(tp.sub[rowSums(tp.sub) > 0, , drop = FALSE])
 
 # plot the chems with available selectivity (had to be tested in mc)
 # most of these are positive but not all 
-sel.data <- acc_wide[dsstox_substance_id %in% chems, 
+sel.data <- acc_wide[dsstox_substance_id %in% longchainc.chems, 
                      .(dsstox_substance_id, chnm, DIO1_acc, DIO2_acc, DIO3_acc, IYD_acc, cytomed, max_selectivity)]
 
 sel.m <- melt.data.table(sel.data, 
@@ -914,11 +946,11 @@ dotplot <- ggplot(data = sel.m,
   coord_flip()
 
 # how many of these chems were tested within each assay?
-totals.by.assay <- merged_dat[dsstox_substance_id %in% chems, 
+totals.by.assay <- merged_dat[dsstox_substance_id %in% longchainc.chems, 
                      .(total = length(unique(dsstox_substance_id))), by = assay]
 
 testedChems.by.assay <- lapply(aenm.abbrevs, function(ae) {
-  merged_dat[assay == ae & dsstox_substance_id %in% chems, dsstox_substance_id]
+  merged_dat[assay == ae & dsstox_substance_id %in% longchainc.chems, dsstox_substance_id]
 })
 names(testedChems.by.assay) <- aenm.abbrevs
 
@@ -932,12 +964,12 @@ venn_obj <- ggvenn(testedChems.by.assay,
   scale_y_continuous(expand = expansion(mult = .1)) # fix labels cropped at the top with this ggplot trick
 
 # class x hitc distribution of these chems 
-actives <- merged_dat[dsstox_substance_id %in% chems & hitc == 1, 
+actives <- merged_dat[dsstox_substance_id %in% longchainc.chems & hitc == 1, 
   .(count = length(unique(dsstox_substance_id))), 
   by = .(assay, class_type, chosen_class)]
 actives[, hitcall := "active"]
 
-inactives <- merged_dat[dsstox_substance_id %in% chems & hitc == 0, 
+inactives <- merged_dat[dsstox_substance_id %in% longchainc.chems & hitc == 0, 
   .(count = length(unique(dsstox_substance_id))), 
   by = .(assay, class_type, chosen_class)]
 inactives[, hitcall := "inactive"]
@@ -1033,14 +1065,18 @@ ggsave(plot = fig,
        dpi = 300, 
        width = 10, height = 19, 
        device = "tiff", 
-       filename = "./doc/comptox-thyroid-httk/figures/300dpi/longchainc_panactive.tiff")
+       filename = "./figures/300dpi/longchainc_panactive.tiff")
 
 ggsave(plot = fig, 
        units = "in", 
        dpi = 300, 
        width = 10, height = 19, 
        device = "png", 
-       filename = "./doc/comptox-thyroid-httk/figures/longchainc_panactive.png")
+       filename = "./figures/longchainc_panactive.png")
+
+# save to RData for later processing 
+save(longchainc.chems, 
+     file = "./data/invitrodb_v3_5_deiod_Enrichment.RData")
 
 ```
 
@@ -1511,3 +1547,4 @@ dio3.inactive <- make_plots(c("chain:oxy-alkaneLinear_ethyleneOxide_EO1"),
 dio3.inactive
 
 ```
+
