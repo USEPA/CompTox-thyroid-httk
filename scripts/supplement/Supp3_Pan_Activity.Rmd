@@ -21,7 +21,7 @@ output:
 
 ```{r setup, include = FALSE}
 library(knitr)
-knitr::opts_knit$set(root.dir = 'C:/Users/ktruong/OneDrive - Environmental Protection Agency (EPA)/Profile/Documents/thyroid_prioritization')
+knitr::opts_knit$set(root.dir = 'C:/Users/ktruong/OneDrive - Environmental Protection Agency (EPA)/Profile/Documents/thyroid_prioritization/doc/comptox-thyroid-httk')
 
 ```
 
@@ -146,10 +146,9 @@ length(unique(hit.rates.colors[active.pct >= 30]$dsstox_substance_id))
 ```
 
 ## pull down assay meta data 
-```{r}
+```{r, warning = FALSE}
 # connect to invitrodb for RMySQL connection
-con <- dbConnect(drv = RMySQL::MySQL(), user="ktruong", #fill user
-                 password = "Today061822K!!", # fill pass
+con <- dbConnect(drv = RMySQL::MySQL(), user='_dataminer', pass='pass',
                  host = "ccte-mysql-res.epa.gov", database = prod_internal_invitrodb_v3_5)
 
 assays <- dbGetQuery(con, "SELECT * FROM prod_internal_invitrodb_v3_5.assay 
@@ -245,7 +244,7 @@ write.csv(lib, "./data/ToxCast_all_chems_invitrodb_v3_5.csv", row.names = F)
 
 ## load ToxPrints 
 ```{r}
-toxprints <- fread("./data/ToxCast_invitrodb_v3_5_toxprints.csv")
+toxprints <- fread("./data/ToxCast_invitrodb_v3_5_input_toxprints.csv")
 
 length(unique(toxprints$DTXSID))
 
@@ -407,11 +406,11 @@ deiod.longchainc.data[active.pct == 100]
 ```
 
 ## save to RData file for prioritization 
-```{r, eval = FALSE}
+```{r}
 e <- new.env(parent = emptyenv())
-(load('./data/Deiodinases/DIO-IYD_invitrodb_v3_5_Enrichment.RData', envir = e))
+(load('./data/invitrodb_v3_5_deiod_Enrichment.RData', envir = e))
 e$dio.panactive <- deiod.longchainc.data[active.pct == 100, dsstox_substance_id]
 e$colors.panactive <- hit.rates.colors[active.pct >= 30, dsstox_substance_id] # promiscuous across db
-do.call("save", c(ls(envir = e), list(envir = e, file = './data/Deiodinases/DIO-IYD_invitrodb_v3_5_Enrichment.RData')))
+do.call("save", c(ls(envir = e), list(envir = e, file = './data/invitrodb_v3_5_deiod_Enrichment.RData')))
 
 ```

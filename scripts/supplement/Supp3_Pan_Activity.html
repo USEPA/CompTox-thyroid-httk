@@ -2969,16 +2969,14 @@ ggplot(hit.rates.colors, aes(x=active.pct)) +
 <div id="pull-down-assay-meta-data" class="section level2">
 <h2>pull down assay meta data</h2>
 <pre class="r"><code># connect to invitrodb for RMySQL connection
-con &lt;- dbConnect(drv = RMySQL::MySQL(), user=&quot;ktruong&quot;, #fill user
-                 password = &quot;Today061822K!!&quot;, # fill pass
+con &lt;- dbConnect(drv = RMySQL::MySQL(), user=&#39;_dataminer&#39;, pass=&#39;pass&#39;,
                  host = &quot;ccte-mysql-res.epa.gov&quot;, database = prod_internal_invitrodb_v3_5)
 
 assays &lt;- dbGetQuery(con, &quot;SELECT * FROM prod_internal_invitrodb_v3_5.assay 
 INNER JOIN prod_internal_invitrodb_v3_5.assay_component ON assay.aid=assay_component.aid 
-INNER JOIN prod_internal_invitrodb_v3_5.assay_component_endpoint ON assay_component.acid=assay_component_endpoint.acid;&quot;)</code></pre>
-<pre><code>## Warning in dbSendQuery(conn, statement, ...): Unsigned INTEGER in col 42
-## imported as numeric</code></pre>
-<pre class="r"><code>long_hitc_final$detection_technology_type &lt;- assays$detection_technology_type[match(long_hitc_final$aeid, assays$aeid)]</code></pre>
+INNER JOIN prod_internal_invitrodb_v3_5.assay_component_endpoint ON assay_component.acid=assay_component_endpoint.acid;&quot;)
+
+long_hitc_final$detection_technology_type &lt;- assays$detection_technology_type[match(long_hitc_final$aeid, assays$aeid)]</code></pre>
 </div>
 <div id="looking-at-just-spectrophotometric-assays" class="section level2">
 <h2>looking at just spectrophotometric assays</h2>
@@ -3076,7 +3074,7 @@ write.csv(lib, &quot;./data/ToxCast_all_chems_invitrodb_v3_5.csv&quot;, row.name
 carbons?</h1>
 <div id="load-toxprints" class="section level2">
 <h2>load ToxPrints</h2>
-<pre class="r"><code>toxprints &lt;- fread(&quot;./data/ToxCast_invitrodb_v3_5_toxprints.csv&quot;)
+<pre class="r"><code>toxprints &lt;- fread(&quot;./data/ToxCast_invitrodb_v3_5_input_toxprints.csv&quot;)
 
 length(unique(toxprints$DTXSID))</code></pre>
 <pre><code>## [1] 8909</code></pre>
@@ -3255,12 +3253,11 @@ assays…</p>
 <div id="save-to-rdata-file-for-prioritization" class="section level2">
 <h2>save to RData file for prioritization</h2>
 <pre class="r"><code>e &lt;- new.env(parent = emptyenv())
-(load(&#39;./data/Deiodinases/DIO-IYD_invitrodb_v3_5_Enrichment.RData&#39;, envir = e))</code></pre>
-<pre><code>## [1] &quot;classified_dat&quot;   &quot;colors.panactive&quot; &quot;dio.panactive&quot;    &quot;long_hitc_final&quot; 
-## [5] &quot;longchainc&quot;       &quot;M.hitc&quot;</code></pre>
+(load(&#39;./data/invitrodb_v3_5_deiod_Enrichment.RData&#39;, envir = e))</code></pre>
+<pre><code>## [1] &quot;longchainc.chems&quot;</code></pre>
 <pre class="r"><code>e$dio.panactive &lt;- deiod.longchainc.data[active.pct == 100, dsstox_substance_id]
 e$colors.panactive &lt;- hit.rates.colors[active.pct &gt;= 30, dsstox_substance_id] # promiscuous across db
-do.call(&quot;save&quot;, c(ls(envir = e), list(envir = e, file = &#39;./data/Deiodinases/DIO-IYD_invitrodb_v3_5_Enrichment.RData&#39;)))</code></pre>
+do.call(&quot;save&quot;, c(ls(envir = e), list(envir = e, file = &#39;./data/invitrodb_v3_5_deiod_Enrichment.RData&#39;)))</code></pre>
 </div>
 </div>
 
