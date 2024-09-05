@@ -3255,7 +3255,7 @@ assays…</p>
 <h2>save to RData file for prioritization</h2>
 <pre class="r"><code>e &lt;- new.env(parent = emptyenv())
 (load(&#39;./data/invitrodb_v3_5_deiod_Enrichment.RData&#39;, envir = e))</code></pre>
-<pre><code>## [1] &quot;longchainc.chems&quot;</code></pre>
+<pre><code>## [1] &quot;longchainc.chems&quot; &quot;M.hitc&quot;</code></pre>
 <pre class="r"><code>e$dio.panactive &lt;- deiod.longchainc.data[active.pct == 100, dsstox_substance_id]
 e$colors.panactive &lt;- hit.rates.colors[active.pct &gt;= 30, dsstox_substance_id] # promiscuous across db
 do.call(&quot;save&quot;, c(ls(envir = e), list(envir = e, file = &#39;./data/invitrodb_v3_5_deiod_Enrichment.RData&#39;)))</code></pre>

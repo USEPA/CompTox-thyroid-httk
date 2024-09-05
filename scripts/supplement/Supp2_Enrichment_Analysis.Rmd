@@ -1076,6 +1076,7 @@ ggsave(plot = fig,
 
 # save to RData for later processing 
 save(longchainc.chems, 
+     M.hitc, 
      file = "./data/invitrodb_v3_5_deiod_Enrichment.RData")
 
 ```
