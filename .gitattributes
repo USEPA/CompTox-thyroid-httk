@@ -1,2 +1,4 @@
 *.tiff filter=lfs diff=lfs merge=lfs -text
 is_Cplasma_protective.tiff filter=lfs diff=lfs merge=lfs -text
+./data/invitrodb_v3_5_snapshot.RData filter=lfs diff=lfs merge=lfs -text
+invitrodb_v3_5_snapshot.RData filter=lfs diff=lfs merge=lfs -text
