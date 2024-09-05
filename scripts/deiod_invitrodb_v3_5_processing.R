@@ -21,12 +21,12 @@ library(openxlsx)
 `%notin%` <- Negate(`%in%`)
 
 # load all data files 
+setwd('C:/Users/ktruong/OneDrive - Environmental Protection Agency (EPA)/Profile/Documents/thyroid_prioritization/doc/comptox-thyroid-httk/')
 load('./data/invitrodb_v3_5_thyroid_data.RData', verbose = TRUE)
-load('./data/Deiodinases/DIO-IYD_invitrodb_v3_5_Enrichment.RData', verbose = TRUE)
-rm(classified_dat) # old classifications
+load('./data/invitrodb_v3_5_deiod_Enrichment.RData', verbose = TRUE)
 
 # load in Richard's latest classifications 
-new.classified <- read_excel(file.path("data", "chemclass level 2.xlsx")) %>% 
+new.classified <- read_excel(file.path("data", "chem_classifications.xlsx")) %>% 
   as.data.table()
 
 # combine QACs from "Expert" to "ClassyFire" group
@@ -36,13 +36,13 @@ new.classified[class_type == "Expert" & chosen_class == "Quaternary ammonium sal
 classified_dt <- new.classified[dtxsid %in% rownames(M.hitc)]
 setnames(classified_dt, "dtxsid", "dsstox_substance_id")
 
-interference.tbl <- read_excel('./data/Deiodinases/olker19_assay_interference_suppTable5.xlsx')
+interference.tbl <- read_excel('./data/olker19_assay_interference_suppTable5.xlsx')
 setnames(interference.tbl, 
          old = c('CASRN', 'Reason Excluded'), 
          new = c('casn', 'flag'))
 
-surfactants <- read_excel('./data/Deiodinases/Chemical_List_ALLSURFACTANTS-2022-10-25.xlsx')
-solvents <- read_excel('./data/Deiodinases/Chemical_List_PARISIII_Solvents-2022-10-25.xlsx')
+surfactants <- read_excel('./data/Chemical_List_ALLSURFACTANTS-2024-09-05.xlsx')
+solvents <- read_excel('./data/Chemical_List_PARISIII-2024-09-05.xlsx')
 
 # DIO/IYD assays
 deiod.meta <- ace.thyroid[thyroid_related_target == 'Deiodinases', 
@@ -118,7 +118,7 @@ all_dat[flags == "QAC", length(unique(dsstox_substance_id))]
 #>[1] 10
 
 # label all long-chain Cs containing the enriched CTs
-all_dat[dsstox_substance_id %in% longchainc, flags := ifelse(is.na(flags), 
+all_dat[dsstox_substance_id %in% longchainc.chems, flags := ifelse(is.na(flags), 
                                                              "contain enriched CT", 
                                                              paste(flags, "contain enriched CT", sep = "; "))]
 
@@ -133,7 +133,7 @@ all_dat[dsstox_substance_id %in% colors.panactive, flags := ifelse(is.na(flags),
                                                                    paste(flags, "promiscuous across db", sep = "; "))]
 
 # Add flag for chems that are ill-defined in terms of structure (i.e. have no ToxPrint)
-toxprints <- fread("./data/Deiodinases/ToxPrints/DIO_IYD_testlib_invitrodb_v3_5_input_toxprints.csv")
+toxprints <- fread("./data/DIO_IYD_testlib_invitrodb_v3_5_input_toxprints.csv")
 setnames(toxprints, "DTXSID", "dsstox_substance_id")
 toxprints[!is.na(cid), has_smile := 1]
 toxprints[cid == "", has_smile := 0]
@@ -214,8 +214,8 @@ ac50.dt[, min_ac50 := pmin(DIO1, DIO2, DIO3, IYD, na.rm = TRUE)]
 save(all_dat,
      sel,
      ac50.dt,
-     file = './doc/comptox-thyroid-httk/data/invitrodbv3_5_deiod_filtered_httk.RData')
+     file = './data/invitrodb_v3_5_deiod_filtered_httk.RData')
 
 # save table for Supplemental File 4 
-write.xlsx(all_dat, "./doc/comptox-thyroid-httk/tables/Supp4_DIO-IYD_invitrodbv3_5_processed.xlsx")
+write.xlsx(all_dat, "./tables/Supp4_DIO-IYD_invitrodbv3_5_processed.xlsx")
 
