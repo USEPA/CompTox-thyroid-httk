@@ -147,12 +147,13 @@ length(unique(hit.rates.colors[active.pct >= 30]$dsstox_substance_id))
 
 ## pull down assay meta data 
 ```{r, warning = FALSE}
-# connect to invitrodb for RMySQL connection
-con <- dbConnect(drv = RMySQL::MySQL(), user="_dataminer", #fill user
-                 password = "pass", # fill pass
-                 host = "ccte-mysql-res.epa.gov", database = prod_internal_invitrodb_v3_5)
+# new way to connect to db
+# need VPN if remote 
+tcplConf(user = "_dataminer", pass = "pass", db = "prod_internal_invitrodb_v3_5", 
+         drvr = "MySQL", host = "ccte-mysql-res.dmap-prod.aws.epa.gov")
+tcplConfList()
 
-assays <- dbGetQuery(con, "SELECT * FROM prod_internal_invitrodb_v3_5.assay 
+assays <- tcplQuery("SELECT * FROM prod_internal_invitrodb_v3_5.assay 
 INNER JOIN prod_internal_invitrodb_v3_5.assay_component ON assay.aid=assay_component.aid 
 INNER JOIN prod_internal_invitrodb_v3_5.assay_component_endpoint ON assay_component.acid=assay_component_endpoint.acid;")
 
@@ -277,7 +278,7 @@ length(unique(all.chains))
   * chain:alkaneLinear_tetradecyl_C14
 
 ## compute hit rates in different sets of assays 
-```{r, fig.width = 15, fig.height = 11}
+```{r, message = FALSE, fig.width = 15, fig.height = 11}
 tc.longchainc.data <- hit.rates[dsstox_substance_id %in% all.chains]
 
 # describe each chem by its largest carbon length 

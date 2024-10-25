@@ -363,13 +363,15 @@ kable(res[[4]], caption = 'For IYD')
 ```{r}
 # output as Excel table with tabs 
 names(res)  <- aenm.abbrevs
-write.xlsx(res, file = "./tables/Supp2_Class_Enrichment_AllResults.xlsx")
+res$Classifications = classified_dt 
+
+write.xlsx(res, file = "./tables/Supp2_Class_Annotations&Enrichment_AllResults.xlsx")
 
 ```
 
 ## Table 5 of Truong et al.  
 ```{r}
-sig.classes <- lapply(res, function(df) {
+sig.classes <- lapply(res[aenm.abbrevs], function(df) {
   sig <- df %>% 
     filter(padj < 0.05 & (Odds_Ratio > 3 | Odds_Ratio < 1/3)) %>% 
     select(Pval, padj, Odds_Ratio, Lower, Upper, group, `Actives in group`, `Inactives in group`)
@@ -942,7 +944,8 @@ dotplot <- ggplot(data = sel.m,
            ymin = floor(min(sel.m$acc)), ymax = ceiling(max(sel.m$acc)),
            alpha = .1, fill = "red") +
   my_theme + 
-  labs(x = 'Chemical', y = 'Concentration at Threshold (log uM)') +
+  labs(x = 'Chemical', 
+       y = bquote(Concentration ~ at ~ "Threshold ("*log[10]~ mu*"M)")) +
   coord_flip()
 
 # how many of these chems were tested within each assay?
@@ -1034,7 +1037,7 @@ piechart <- ggplot(active.pie,
   scale_fill_discrete(name = "", 
                       labels = c("Actives not represented by chemotypes", "Actives represented by chemotypes")) +
   facet_wrap(~ assay, nrow =  1) +
-  geom_text(aes(x = 1.25, label = ifelse(in_group, paste0(round(total_pct, digits = 1), "%"), "")),
+  geom_text(aes(x = 1.25, label = ifelse(in_group, paste0(round(total_pct), "%"), "")),
             color = "black", size = 13/.pt, 
             position = position_stack(vjust = 0.5)) +
   theme_void() + 
@@ -1075,8 +1078,9 @@ ggsave(plot = fig,
        filename = "./figures/longchainc_panactive.png")
 
 # save to RData for later processing 
-save(longchainc.chems, 
-     M.hitc, 
+save(longchainc.chems,
+     M.hitc,
+     classified_dt,
      file = "./data/invitrodb_v3_5_deiod_Enrichment.RData")
 
 ```
