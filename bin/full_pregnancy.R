@@ -4,6 +4,7 @@ library(httk)
 library(data.table)
 library(dplyr)
 library(ggplot2)
+library(stringr)
 
 full_pregnancy <- function(dtxsid, track.vars = NULL, plt = FALSE,
                            return.units = "amt",

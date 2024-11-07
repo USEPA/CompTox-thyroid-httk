@@ -6,7 +6,7 @@
 # promiscuous across ToxCast for colorful substances). 
 # @author: Kimberly Truong
 # created: 11/16/2023
-# updated: 8/22/2024
+# updated: 11/6/2024
 # ==============================================================================
 
 # Set up Env and Load Data -----------------------------------------------------
@@ -158,20 +158,20 @@ sel <- all_dat[mc.hitc == 1 & selectivity > 0.3 & is.na(flags)][
 
 sel[, .N, by = deiodinase_type] 
 #>   deiodinase_type  N
-#>1:            DIO1 52
-#>2:            DIO2 59
-#>3:            DIO3 88
+#>1:            DIO1 54
+#>2:            DIO2 63
+#>3:            DIO3 92
 #>4:             IYD 15
 
 length(unique(sel$dsstox_substance_id))
-#> [1] 131
+#> [1] 135
 
 # add flag for cytotoxicity using selectivity 
 all_dat[selectivity < 0.3, flags := ifelse(is.na(flags), "nonselective", 
                                            paste(flags, "nonselective", sep = "; "))]
 
 # compare above to pre-filtering out likely false positives
-# flags (alone) clean up 58%-87% of the mc positives! 
+# flags (alone) clean up 56%-87% of the mc positives! 
 all_dat[mc.hitc == 1, .N, keyby = deiodinase_type]
 #>  deiodinase_type   N
 #>1:            DIO1 154
@@ -179,28 +179,31 @@ all_dat[mc.hitc == 1, .N, keyby = deiodinase_type]
 #>3:            DIO3 209
 #>4:             IYD 119
 
-1-(52/154)
-#> [1] 0.6623377
-1-(59/209)
-#> [1] 0.7177033
-1-(88/209)
-#> [1] 0.5789474
+1-(54/154)
+#> [1] 0.6493506
+1-(63/209)
+#> [1] 0.6985646
+1-(92/209)
+#> [1] 0.5598086
 1-(15/119)
 #> [1] 0.8739496
 
-# 3-6% were mixtures/UVCBs
+# 11% were mixtures/UVCBs
 sel2 <- sel[has_smile == 1][
   order(-selectivity), .SD, keyby = deiodinase_type] 
 
 sel2[, .N, by = deiodinase_type]
 #>   deiodinase_type  N
-#>1:            DIO1 48
-#>2:            DIO2 52
-#>3:            DIO3 76
+#>1:            DIO1 49
+#>2:            DIO2 55
+#>3:            DIO3 79
 #>4:             IYD 12
 
 sel2[, length(unique(dsstox_substance_id))]
-#> [1] 117
+#> [1] 120
+
+length(unique(sel$dsstox_substance_id))
+#> [1] 135
 
 # AC50 table by chem x aeid  
 sel2[, ac50_uM := 10^modl_ga]
