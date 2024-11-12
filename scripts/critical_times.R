@@ -8,7 +8,7 @@
 # 
 # @author: Kimberly Truong
 # created: 2/1/2023
-# updated: 6/20/2024
+# updated: 11/12/2024
 # ==============================================================================
 
 rm(list=ls())
@@ -19,33 +19,21 @@ library(data.table)
 library(ggplot2)
 library(latex2exp)
 library(cowplot)
+library(viridis)
 
 # load working function to run the full gestational model
-source("./doc/comptox-thyroid-httk/bin/full_pregnancy.R")
+source("./bin/full_pregnancy.R")
 
-load('./data/Deiodinases/deiod_invitrodbv3_5_filtered_ivive_fullterm_preg_branch.RData', verbose = TRUE)
+load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', verbose = TRUE)
 
 load_dawson2021() # most data for ToxCast chems
 load_sipes2017() # most data for pharma compounds 
 load_pradeep2020() # best ML method for in silico prediction
 
-# compute times to reach css
+# compute half-lives
 for (i in 1:nrow(ivive.moe.tb)) {
-  css.out <- calc_css(dtxsid = ivive.moe.tb$dtxsid[i],
-                      species = 'Human',
-                      output.units = 'uM',
-                      daily.dose = 1,
-                      doses.per.day = 1,
-                      tissue = 'plasma',
-                      model = 'pbtk',
-                      adjusted.Funbound.plasma = TRUE,
-                      well.stirred.correction = TRUE, 
-                      restrictive.clearance = TRUE,
-                      f = 0.001)
-  
-  ivive.moe.tb$half.life[i] <- calc_half_life(dtxsid = ivive.moe.tb$dtxsid[i])
-  ivive.moe.tb$the.day[i] <- css.out$the.day
-  
+  ivive.moe.tb$half.life[i] <- calc_half_life(dtxsid = ivive.moe.tb$dtxsid[i]) # in hrs
+  ivive.moe.tb$half.life.days <- ivive.moe.tb$half.life/24 # in days
 }
 
 ivive.moe.tb$half.life.yrs <- ivive.moe.tb$half.life/24/30/12
@@ -79,21 +67,14 @@ for(i in 1:nrow(ivive.moe.tb)) {
   
   cat('Calculating for chemical: ', ivive.moe.tb$chnm[i], '\n')
   
-  if (ivive.moe.tb$the.day[i] > 0) {
-    # output solution in days
-    sol.out <- full_pregnancy(dtxsid = ivive.moe.tb$dtxsid[i],
-                              daily.dose = 1, 
-                              doses.per.day = 1,
-                              time.course = seq(0, 40*7, 1),
-                              track.vars = impacted_tissues)
-  } else {
-    # output solution every hr
-    sol.out <- full_pregnancy(dtxsid = ivive.moe.tb$dtxsid[i],
-                              daily.dose = 1, 
-                              doses.per.day = 1,
-                              time.course = seq(0, 40*7, 1/24),
-                              track.vars = impacted_tissues)
-  }
+
+  # output solution every hr
+  sol.out <- full_pregnancy(dtxsid = ivive.moe.tb$dtxsid[i],
+                            daily.dose = 1, 
+                            doses.per.day = 1,
+                            time.course = seq(0, 40*7, 1/24),
+                            track.vars = impacted_tissues)
+
   
   # function to find time to reach Cmax from scaled output dataframe   
   # acts on each column of the dataframe but also need the entire dataframe 
@@ -180,7 +161,9 @@ my_theme <-  theme_bw() +
         axis.text = element_text(size = 12), 
         legend.text = element_text(size = 12), 
         legend.background = element_blank()) 
-  
+
+my_viridis_colors <- viridis(n = 3)
+
 # plot ECDF for times to reach Cmax in maternal vs fetal tissues
 cdfpp <- ggplot(ecdf.data, aes(min_tstar, color = body)) + 
   stat_ecdf(linewidth = 1) +
@@ -188,9 +171,9 @@ cdfpp <- ggplot(ecdf.data, aes(min_tstar, color = body)) +
                      breaks = c(seq(0,10,2), 13, seq(15,40,5))) +
   scale_color_manual(labels = c(TeX("$min(T^{*}_{f})$ Min week to reach Cmax in the conceptus, placenta, \n or fetal compartment (thyroid, liver, or brain)"), 
                                 TeX("$min(T^{*}_{m})$: Min week to reach Cmax in the liver or thyroid of the mother")), 
-                     values = c("#73D055FF", "#482677FF")) +
+                     values = c(my_viridis_colors[2], my_viridis_colors[1])) +
   geom_vline(xintercept = 13, 
-             linetype = 'dashed', color = 'orange', linewidth = 1) +
+             linetype = 'dashed', color = my_viridis_colors[3], linewidth = 1) +
   my_theme + 
   theme(legend.position = "bottom", 
         legend.direction = "vertical", 
@@ -218,21 +201,21 @@ get_param <- function(dtxsid, parameter) {
 }
 
 # this was done once and saved in the RData file 
-# physchem.tb <- matrix(0, ncol = length(parameters), nrow = nrow(ivive.moe.tb))
-# 
-# for(i in 1:nrow(ivive.moe.tb)) {
-#   physchem.tb[i, ] = sapply(parameters, get_param, dtxsid = ivive.moe.tb$dtxsid[i])
-#   cat("Done for", i, "chemicals \n")
-# }
-# 
-# colnames(physchem.tb) <- parameters
-# physchem.tb <- data.frame(physchem.tb)
-# physchem.tb$dtxsid <- ivive.moe.tb$dtxsid
-# physchem.tb$chnm <- ivive.moe.tb$chnm
-# physchem.tb <- physchem.tb[, c("dtxsid", "chnm", parameters)]
-#
+physchem.tb <- matrix(0, ncol = length(parameters), nrow = nrow(ivive.moe.tb))
+
+for(i in 1:nrow(ivive.moe.tb)) {
+  physchem.tb[i, ] = sapply(parameters, get_param, dtxsid = ivive.moe.tb$dtxsid[i])
+  cat("Done for", i, "chemicals \n")
+}
+
+colnames(physchem.tb) <- parameters
+physchem.tb <- data.frame(physchem.tb)
+physchem.tb$dtxsid <- ivive.moe.tb$dtxsid
+physchem.tb$chnm <- ivive.moe.tb$chnm
+physchem.tb <- physchem.tb[, c("dtxsid", "chnm", parameters)]
+
 # make everything on a log10 scale
-# physchem.tb[parameters] <- lapply(physchem.tb[parameters], log10)
+physchem.tb[parameters] <- lapply(physchem.tb[parameters], log10)
 
 # melt data for violin plots
 ecdf.tk <- reshape2::melt(physchem.tb[, c("dtxsid", parameters[parameters != "Fraction_unbound_plasma_fetus"])], 
@@ -284,19 +267,19 @@ ggsave(plot = fig,
        dpi = 300, 
        width = 13.9, height = 8.1, 
        device = "tiff", 
-       filename = "./doc/comptox-thyroid-httk/figures/ecdf.tiff")
+       filename = "./figures/300dpi/ecdf-v2.tiff")
 
 ggsave(plot = fig, 
        units = "in", 
        dpi = 300, 
        width = 13.9, height = 8.1, 
        device = "png", 
-       filename = "./doc/comptox-thyroid-httk/figures/ecdf.png")
+       filename = "./figures/ecdf-v2.png")
 
 # update RData file with min times to reach Cmax in fetal vs. maternal tissues
-# as well as physicochemical property values 
-# e <- new.env(parent = emptyenv())
-# load('./data/Deiodinases/deiod_invitrodbv3_5_filtered_ivive_fullterm_preg_branch.RData', envir = e)
-# e$ecdf.data <- ecdf.data
-# e$physchem.tb <- physchem.tb
-# do.call("save", c(ls(envir = e), list(envir = e, file = './data/Deiodinases/deiod_invitrodbv3_5_filtered_ivive_fullterm_preg_branch.RData')))
+# as well as physicochemical property values
+e <- new.env(parent = emptyenv())
+load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', envir = e)
+e$ecdf.data <- ecdf.data
+e$physchem.tb <- physchem.tb
+do.call("save", c(ls(envir = e), list(envir = e, file ='./data/invitrodb_v3_5_deiod_filtered_httk.RData')))

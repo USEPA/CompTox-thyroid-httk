@@ -12,7 +12,7 @@
 
 <meta name="author" content="Kimberly Truong" />
 
-<meta name="date" content="2024-11-07" />
+<meta name="date" content="2024-11-12" />
 
 <title>Truong et al. (2024): Using Thyroid-Related Bioactivity Data for Full Human Gestational IVIVE</title>
 
@@ -341,7 +341,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <h1 class="title toc-ignore">Truong et al. (2024): Using Thyroid-Related
 Bioactivity Data for Full Human Gestational IVIVE</h1>
 <h4 class="author">Kimberly Truong</h4>
-<h4 class="date">2024-11-07</h4>
+<h4 class="date">2024-11-12</h4>
 
 
 
@@ -394,7 +394,9 @@ results were saved in the
 <pre><code>## Loading objects:
 ##   ac50.dt
 ##   all_dat
+##   ecdf.data
 ##   ivive.moe.tb
+##   physchem.tb
 ##   sel
 ##   tissue.aeds
 ##   tissue.bers</code></pre>
@@ -841,7 +843,7 @@ parameters.</p>
 <span id="cb27-47"><a href="#cb27-47" tabindex="-1"></a>         <span class="at">new =</span> <span class="fu">c</span>(<span class="st">&#39;plasma_BER50&#39;</span>, <span class="st">&#39;DIO1_BER&#39;</span>, <span class="st">&#39;DIO2_BER&#39;</span>, <span class="st">&#39;DIO3_BER&#39;</span>, <span class="st">&#39;IYD_BER&#39;</span>, <span class="st">&#39;min_BER&#39;</span>))</span>
 <span id="cb27-48"><a href="#cb27-48" tabindex="-1"></a></span>
 <span id="cb27-49"><a href="#cb27-49" tabindex="-1"></a>plasma.tissue.bers <span class="ot">&lt;-</span> plasma.tissue.bers[<span class="fu">order</span>(min_BER)]</span>
-<span id="cb27-50"><a href="#cb27-50" tabindex="-1"></a><span class="fu">write.xlsx</span>(plasma.tissue.bers, <span class="st">&quot;./doc/comptox-thyroid-httk/tables/plasma_and_tissueBERs.xlsx&quot;</span>, <span class="at">colnames =</span> T)</span>
+<span id="cb27-50"><a href="#cb27-50" tabindex="-1"></a><span class="fu">write.xlsx</span>(plasma.tissue.bers, <span class="st">&quot;./tables/plasma_and_tissueBERs.xlsx&quot;</span>, <span class="at">colnames =</span> T)</span>
 <span id="cb27-51"><a href="#cb27-51" tabindex="-1"></a></span>
 <span id="cb27-52"><a href="#cb27-52" tabindex="-1"></a><span class="co"># hide double label of Ergocalciferol </span></span>
 <span id="cb27-53"><a href="#cb27-53" tabindex="-1"></a><span class="co"># this occurred because min AED for this chemical was achieved in both maternal/fetal thyr</span></span>

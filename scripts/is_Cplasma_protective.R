@@ -4,7 +4,7 @@
 # 
 # @author: Kimberly Truong
 # created: 5/30/24
-# updated: 6/24/24
+# updated: 11/12/24
 # ==============================================================================
 
 rm(list=ls())
@@ -17,31 +17,22 @@ library(latex2exp)
 library(cowplot)
 
 # load working function to run the full gestational model
-source("./doc/comptox-thyroid-httk/bin/full_pregnancy.R")
+source("./bin/full_pregnancy.R")
 
-load('./data/Deiodinases/deiod_invitrodbv3_5_filtered_ivive_fullterm_preg_branch.RData', verbose = TRUE)
+load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', verbose = TRUE)
 
 load_dawson2021() # most data for ToxCast chems
 load_sipes2017() # most data for pharma compounds 
 load_pradeep2020() # best ML method for in silico prediction
 
-# compute times to reach css
+# compute half-lives
 for (i in 1:nrow(ivive.moe.tb)) {
-  css.out <- calc_css(dtxsid = ivive.moe.tb$dtxsid[i],
-                      species = 'Human',
-                      output.units = 'uM',
-                      daily.dose = 1,
-                      doses.per.day = 1,
-                      tissue = 'plasma',
-                      model = 'pbtk',
-                      adjusted.Funbound.plasma = TRUE,
-                      well.stirred.correction = TRUE, 
-                      restrictive.clearance = TRUE,
-                      f = 0.001)
-  
-  ivive.moe.tb$the.day[i] <- css.out$the.day
-  
+  ivive.moe.tb$half.life[i] <- calc_half_life(dtxsid = ivive.moe.tb$dtxsid[i]) # in hrs
+  ivive.moe.tb$half.life.days <- ivive.moe.tb$half.life/24 # in days
 }
+
+ivive.moe.tb$half.life.yrs <- ivive.moe.tb$half.life/24/30/12
+ivive.moe.tb$half.life.wks <- ivive.moe.tb$half.life/24/7
 
 # Main Script starts here ------------------------------------------------------
 
@@ -56,22 +47,13 @@ for (i in 1:nrow(ivive.moe.tb)) {
   
   cat('Calculating for chemical: ', ivive.moe.tb$chnm[i], '\n')
   
-  if (ivive.moe.tb$the.day[i] > 0) {
-    # output solution in days
-    sol.out <- full_pregnancy(dtxsid = ivive.moe.tb$dtxsid[i],
-                              daily.dose = 1, 
-                              doses.per.day = 1,
-                              time.course = seq(0, 40*7, 1),
-                              track.vars = tissues)
-  } else {
-    # output solution every hr
-    sol.out <- full_pregnancy(dtxsid = ivive.moe.tb$dtxsid[i],
-                              daily.dose = 1, 
-                              doses.per.day = 1,
-                              time.course = seq(0, 40*7, 1/24),
-                              track.vars = tissues)
-  }
-  
+  # output solution every hr
+  sol.out <- full_pregnancy(dtxsid = ivive.moe.tb$dtxsid[i],
+                            daily.dose = 1, 
+                            doses.per.day = 1,
+                            time.course = seq(0, 40*7, 1/24),
+                            track.vars = tissues)
+
   # this ignores Inf values after division 
   my.max <- function(x) {
     
@@ -221,11 +203,11 @@ ggsave(plot = fig,
        dpi = 300, 
        width = 18, height = 16.5, 
        device = "tiff", 
-       filename = "./doc/comptox-thyroid-httk/figures/is_Cplasma_protective.tiff")
+       filename = "./figures/300dpi/is_Cplasma_protective-v2.tiff")
 
 ggsave(plot = fig, 
        units = "in", 
        dpi = 300, 
        width = 18, height = 16.5, 
        device = "png", 
-       filename = "./doc/comptox-thyroid-httk/figures/is_Cplasma_protective.png")
+       filename = "./figures/is_Cplasma_protective-v2.png")
