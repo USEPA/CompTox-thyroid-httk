@@ -12,7 +12,7 @@
 
 <meta name="author" content="Kimberly Truong" />
 
-<meta name="date" content="2024-11-12" />
+<meta name="date" content="2024-11-18" />
 
 <title>Truong et al. (2024): Using Thyroid-Related Bioactivity Data for Full Human Gestational IVIVE</title>
 
@@ -341,7 +341,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <h1 class="title toc-ignore">Truong et al. (2024): Using Thyroid-Related
 Bioactivity Data for Full Human Gestational IVIVE</h1>
 <h4 class="author">Kimberly Truong</h4>
-<h4 class="date">2024-11-12</h4>
+<h4 class="date">2024-11-18</h4>
 
 
 
@@ -402,6 +402,17 @@ results were saved in the
 ##   tissue.bers</code></pre>
 <div id="eval-execute.chunk" class="section level3">
 <h3>eval = execute.chunk</h3>
+<p>Several chunks of code in this vignette have “eval = execute.chunk”
+and we set execute.chunk to be FALSE, by default. We do this to include
+all the code that was necessary to produce the figures but was not run
+when the vignette was built since some of these chunks take a
+considerable amount of time. You can still reproduce the end figures
+knitting the .Rmd file, since all the necessary and intermediate data
+objects are stored in
+<code>./data/invitrodb_v3_5_deiod_filtered_httk.RData</code>. If you
+want to rerun the whole workflow on your own, you must rerun all code
+from top to bottom, either by changing execute.chunk to TRUE or click on
+the “green arrow” in RStudio.</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>execute.chunk <span class="ot">&lt;-</span> <span class="cn">FALSE</span> </span></code></pre></div>
 </div>
 <div id="load-libraries" class="section level3">
@@ -488,8 +499,9 @@ parameters.</p>
 <h2>Predicting AEDs based on Css50 (in plasma)</h2>
 <p>There are two ways to compute an oral AED in <em>httk</em>:<br />
 1. compute a steady-state plasma concentration via
-<code>calc_mc_css</code> and then AED := AC50/CSS50.<br />
-2. use <code>calc_mc_oral_equiv</code> passing the AC50 to the
+<code>calc_mc_css</code> and then: <span class="math display">\[
+AED = \frac{AC_{50}}{CSS_{50}}
+\]</span> 2. use <code>calc_mc_oral_equiv</code> passing the AC50 to the
 <code>conc</code> argument and specifying
 <code>which.quantile = c(0.5)</code>.</p>
 <div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(human.httk.dt)) {</span>
@@ -596,7 +608,7 @@ parameters.</p>
 <span id="cb22-12"><a href="#cb22-12" tabindex="-1"></a>  </span>
 <span id="cb22-13"><a href="#cb22-13" tabindex="-1"></a>  <span class="fu">message</span>(<span class="st">&#39;Calculating for chemical: &#39;</span>, ivive.moe.tb<span class="sc">$</span>chnm[i], <span class="st">&#39;</span><span class="sc">\n</span><span class="st">&#39;</span>)</span>
 <span id="cb22-14"><a href="#cb22-14" tabindex="-1"></a>  </span>
-<span id="cb22-15"><a href="#cb22-15" tabindex="-1"></a>  sol.out <span class="ot">&lt;-</span> <span class="fu">full_pregnancy</span>(<span class="at">dtxsid =</span> ivive.moe.tb<span class="sc">$</span>dtxsid[i],</span>
+<span id="cb22-15"><a href="#cb22-15" tabindex="-1"></a>  sol.out <span class="ot">&lt;-</span> <span class="fu">solve_full_pregnancy</span>(<span class="at">dtxsid =</span> ivive.moe.tb<span class="sc">$</span>dtxsid[i],</span>
 <span id="cb22-16"><a href="#cb22-16" tabindex="-1"></a>                            <span class="at">daily.dose =</span> <span class="dv">1</span>, </span>
 <span id="cb22-17"><a href="#cb22-17" tabindex="-1"></a>                            <span class="at">doses.per.day =</span> <span class="dv">1</span>,</span>
 <span id="cb22-18"><a href="#cb22-18" tabindex="-1"></a>                            <span class="at">time.course =</span> <span class="fu">seq</span>(<span class="dv">0</span>, <span class="dv">40</span><span class="sc">*</span><span class="dv">7</span>, <span class="dv">1</span><span class="sc">/</span><span class="dv">24</span>), <span class="co"># view solution by hour</span></span>
@@ -771,14 +783,14 @@ parameters.</p>
 <span id="cb25-127"><a href="#cb25-127" tabindex="-1"></a>       <span class="at">dpi =</span> <span class="dv">300</span>,</span>
 <span id="cb25-128"><a href="#cb25-128" tabindex="-1"></a>       <span class="at">width =</span> <span class="fl">21.33</span>, <span class="at">height =</span> <span class="dv">11</span>,</span>
 <span id="cb25-129"><a href="#cb25-129" tabindex="-1"></a>       <span class="at">device =</span> <span class="st">&quot;tiff&quot;</span>,</span>
-<span id="cb25-130"><a href="#cb25-130" tabindex="-1"></a>       <span class="at">filename =</span> <span class="st">&quot;./figures/300dpi/preg_prioritization_by_BER-v2.tiff&quot;</span>)</span>
+<span id="cb25-130"><a href="#cb25-130" tabindex="-1"></a>       <span class="at">filename =</span> <span class="st">&quot;./figures/300dpi/preg_prioritization_by_BER-v3.tiff&quot;</span>)</span>
 <span id="cb25-131"><a href="#cb25-131" tabindex="-1"></a></span>
 <span id="cb25-132"><a href="#cb25-132" tabindex="-1"></a><span class="fu">ggsave</span>(<span class="at">plot =</span> fig9,</span>
 <span id="cb25-133"><a href="#cb25-133" tabindex="-1"></a>       <span class="at">units =</span> <span class="st">&quot;in&quot;</span>,</span>
 <span id="cb25-134"><a href="#cb25-134" tabindex="-1"></a>       <span class="at">dpi =</span> <span class="dv">300</span>,</span>
 <span id="cb25-135"><a href="#cb25-135" tabindex="-1"></a>       <span class="at">width =</span> <span class="fl">21.33</span>, <span class="at">height =</span> <span class="dv">11</span>,</span>
 <span id="cb25-136"><a href="#cb25-136" tabindex="-1"></a>       <span class="at">device =</span> <span class="st">&quot;png&quot;</span>,</span>
-<span id="cb25-137"><a href="#cb25-137" tabindex="-1"></a>       <span class="at">filename =</span> <span class="st">&quot;./figures/preg_prioritization_by_BER-v2.png&quot;</span>)</span></code></pre></div>
+<span id="cb25-137"><a href="#cb25-137" tabindex="-1"></a>       <span class="at">filename =</span> <span class="st">&quot;./figures/preg_prioritization_by_BER-v3.png&quot;</span>)</span></code></pre></div>
 <div id="update-rdata-file-with-maternal-fetal-bers" class="section level3">
 <h3>update RData File with maternal-fetal BERs</h3>
 <div class="sourceCode" id="cb26"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" tabindex="-1"></a><span class="co"># update RData file with melted data for ggplot</span></span>
@@ -847,7 +859,7 @@ parameters.</p>
 <span id="cb27-51"><a href="#cb27-51" tabindex="-1"></a></span>
 <span id="cb27-52"><a href="#cb27-52" tabindex="-1"></a><span class="co"># hide double label of Ergocalciferol </span></span>
 <span id="cb27-53"><a href="#cb27-53" tabindex="-1"></a><span class="co"># this occurred because min AED for this chemical was achieved in both maternal/fetal thyr</span></span>
-<span id="cb27-54"><a href="#cb27-54" tabindex="-1"></a>plasma.tissue.bers[<span class="fu">which</span>(plasma.tissue.bers<span class="sc">$</span>chnm <span class="sc">==</span> <span class="st">&quot;Ergocalciferol&quot;</span>)[<span class="dv">2</span>], chnm <span class="sc">:=</span> <span class="cn">NA_character_</span>]</span>
+<span id="cb27-54"><a href="#cb27-54" tabindex="-1"></a>plasma.tissue.bers[<span class="fu">which</span>(plasma.tissue.bers<span class="sc">$</span>chnm <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;Ergocalciferol&quot;</span>, <span class="st">&quot;Morin hydrate&quot;</span>))[<span class="fu">c</span>(<span class="dv">2</span>,<span class="dv">4</span>)], chnm <span class="sc">:=</span> <span class="cn">NA_character_</span>]</span>
 <span id="cb27-55"><a href="#cb27-55" tabindex="-1"></a></span>
 <span id="cb27-56"><a href="#cb27-56" tabindex="-1"></a>max_ber <span class="ot">&lt;-</span> <span class="fu">max</span>(plasma.tissue.bers[, <span class="fu">c</span>(<span class="st">&#39;plasma_BER50&#39;</span>, <span class="st">&#39;DIO1_BER&#39;</span>, <span class="st">&#39;DIO2_BER&#39;</span>, <span class="st">&#39;DIO3_BER&#39;</span>, <span class="st">&#39;IYD_BER&#39;</span>)], <span class="at">na.rm =</span> T)</span>
 <span id="cb27-57"><a href="#cb27-57" tabindex="-1"></a>min_ber <span class="ot">&lt;-</span> <span class="fu">min</span>(plasma.tissue.bers[, <span class="fu">c</span>(<span class="st">&#39;plasma_BER50&#39;</span>, <span class="st">&#39;DIO1_BER&#39;</span>, <span class="st">&#39;DIO2_BER&#39;</span>, <span class="st">&#39;DIO3_BER&#39;</span>, <span class="st">&#39;IYD_BER&#39;</span>)], <span class="at">na.rm =</span> T)</span>
@@ -896,7 +908,7 @@ parameters.</p>
 <span id="cb27-100"><a href="#cb27-100" tabindex="-1"></a>min.ber.lims <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">floor</span>(min.min.ber), <span class="fu">ceiling</span>(max.min.ber))</span>
 <span id="cb27-101"><a href="#cb27-101" tabindex="-1"></a>max.uncertainty <span class="ot">&lt;-</span> <span class="fu">max</span>(plasma.tissue.bers<span class="sc">$</span>uncertainty)</span>
 <span id="cb27-102"><a href="#cb27-102" tabindex="-1"></a></span>
-<span id="cb27-103"><a href="#cb27-103" tabindex="-1"></a>seem3pp <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(<span class="at">data =</span> plasma.tissue.bers[<span class="sc">-</span><span class="dv">3</span>, ], </span>
+<span id="cb27-103"><a href="#cb27-103" tabindex="-1"></a>seem3pp <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(<span class="at">data =</span> plasma.tissue.bers[<span class="sc">-</span><span class="fu">c</span>(<span class="dv">3</span>,<span class="dv">17</span>), ], </span>
 <span id="cb27-104"><a href="#cb27-104" tabindex="-1"></a>       <span class="at">mapping =</span> <span class="fu">aes</span>(<span class="at">x =</span> min_BER, </span>
 <span id="cb27-105"><a href="#cb27-105" tabindex="-1"></a>                     <span class="at">y =</span> uncertainty)) <span class="sc">+</span></span>
 <span id="cb27-106"><a href="#cb27-106" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">size =</span> <span class="dv">3</span>, <span class="at">alpha =</span> <span class="fl">0.8</span>) <span class="sc">+</span></span>
@@ -926,14 +938,14 @@ parameters.</p>
 <span id="cb29-8"><a href="#cb29-8" tabindex="-1"></a>       <span class="at">dpi =</span> <span class="dv">300</span>, </span>
 <span id="cb29-9"><a href="#cb29-9" tabindex="-1"></a>       <span class="at">width =</span> <span class="fl">18.53</span>, <span class="at">height =</span> <span class="fl">8.32</span>, </span>
 <span id="cb29-10"><a href="#cb29-10" tabindex="-1"></a>       <span class="at">device =</span> <span class="st">&quot;tiff&quot;</span>, </span>
-<span id="cb29-11"><a href="#cb29-11" tabindex="-1"></a>       <span class="at">filename =</span> <span class="st">&quot;./figures/300dpi/BER_uncertainty-v2.tiff&quot;</span>)</span>
+<span id="cb29-11"><a href="#cb29-11" tabindex="-1"></a>       <span class="at">filename =</span> <span class="st">&quot;./figures/300dpi/BER_uncertainty-v3.tiff&quot;</span>)</span>
 <span id="cb29-12"><a href="#cb29-12" tabindex="-1"></a></span>
 <span id="cb29-13"><a href="#cb29-13" tabindex="-1"></a><span class="fu">ggsave</span>(<span class="at">plot =</span> bers2, </span>
 <span id="cb29-14"><a href="#cb29-14" tabindex="-1"></a>       <span class="at">units =</span> <span class="st">&quot;in&quot;</span>, </span>
 <span id="cb29-15"><a href="#cb29-15" tabindex="-1"></a>       <span class="at">dpi =</span> <span class="dv">300</span>, </span>
 <span id="cb29-16"><a href="#cb29-16" tabindex="-1"></a>       <span class="at">width =</span> <span class="fl">18.53</span>, <span class="at">height =</span> <span class="fl">8.32</span>, </span>
 <span id="cb29-17"><a href="#cb29-17" tabindex="-1"></a>       <span class="at">device =</span> <span class="st">&quot;png&quot;</span>, </span>
-<span id="cb29-18"><a href="#cb29-18" tabindex="-1"></a>       <span class="at">filename =</span> <span class="st">&quot;./figures/BER_uncertainty-v2.png&quot;</span>)</span></code></pre></div>
+<span id="cb29-18"><a href="#cb29-18" tabindex="-1"></a>       <span class="at">filename =</span> <span class="st">&quot;./figures/BER_uncertainty-v3.png&quot;</span>)</span></code></pre></div>
 </div>
 </div>
 

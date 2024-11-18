@@ -6,7 +6,7 @@ library(dplyr)
 library(ggplot2)
 library(stringr)
 
-full_pregnancy <- function(dtxsid, track.vars = NULL, plt = FALSE,
+solve_full_pregnancy <- function(dtxsid, track.vars = NULL, plt = FALSE,
                            return.units = "amt",
                            time.course = seq(0,40*7,1/24), # every hour
                            ...) {

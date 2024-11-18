@@ -42,6 +42,8 @@ load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', verbose = TRUE)
 
 ```
 ### eval = execute.chunk 
+Several chunks of code in this vignette have "eval = execute.chunk" and we set execute.chunk to be FALSE, by default. We do this to include all the code that was necessary to produce the figures but was not run when the vignette was built since some of these chunks take a considerable amount of time. You can still reproduce the end figures knitting the .Rmd file, since all the necessary and intermediate data objects are stored in `./data/invitrodb_v3_5_deiod_filtered_httk.RData`. If you want to rerun the whole workflow on your own, you must rerun all code from top to bottom, either by changing execute.chunk to TRUE or click on the "green arrow" in RStudio. 
+
 ```{r}
 execute.chunk <- FALSE 
 ```
@@ -99,7 +101,10 @@ missing.dtxsids <- setdiff(ac50.dt$dsstox_substance_id, human.httk.dt$dsstox_sub
 
 ## Predicting AEDs based on Css50 (in plasma)
 There are two ways to compute an oral AED in *httk*:  
-1. compute a steady-state plasma concentration via `calc_mc_css` and then AED := AC50/CSS50.  
+1. compute a steady-state plasma concentration via `calc_mc_css` and then:
+$$ 
+AED = \frac{AC_{50}}{CSS_{50}}
+$$
 2. use `calc_mc_oral_equiv` passing the AC50 to the `conc` argument and specifying `which.quantile = c(0.5)`.  
 
 ```{r 3compss-aeds, warning = FALSE, message = FALSE, eval = execute.chunk}
@@ -217,7 +222,7 @@ for(i in 1:nrow(ivive.moe.tb)) {
   
   message('Calculating for chemical: ', ivive.moe.tb$chnm[i], '\n')
   
-  sol.out <- full_pregnancy(dtxsid = ivive.moe.tb$dtxsid[i],
+  sol.out <- solve_full_pregnancy(dtxsid = ivive.moe.tb$dtxsid[i],
                             daily.dose = 1, 
                             doses.per.day = 1,
                             time.course = seq(0, 40*7, 1/24), # view solution by hour
@@ -399,14 +404,14 @@ ggsave(plot = fig9,
        dpi = 300,
        width = 21.33, height = 11,
        device = "tiff",
-       filename = "./figures/300dpi/preg_prioritization_by_BER-v2.tiff")
+       filename = "./figures/300dpi/preg_prioritization_by_BER-v3.tiff")
 
 ggsave(plot = fig9,
        units = "in",
        dpi = 300,
        width = 21.33, height = 11,
        device = "png",
-       filename = "./figures/preg_prioritization_by_BER-v2.png")
+       filename = "./figures/preg_prioritization_by_BER-v3.png")
 
 ```
 
@@ -478,7 +483,7 @@ write.xlsx(plasma.tissue.bers, "./tables/plasma_and_tissueBERs.xlsx", colnames =
 
 # hide double label of Ergocalciferol 
 # this occurred because min AED for this chemical was achieved in both maternal/fetal thyr
-plasma.tissue.bers[which(plasma.tissue.bers$chnm == "Ergocalciferol")[2], chnm := NA_character_]
+plasma.tissue.bers[which(plasma.tissue.bers$chnm %in% c("Ergocalciferol", "Morin hydrate"))[c(2,4)], chnm := NA_character_]
 
 max_ber <- max(plasma.tissue.bers[, c('plasma_BER50', 'DIO1_BER', 'DIO2_BER', 'DIO3_BER', 'IYD_BER')], na.rm = T)
 min_ber <- min(plasma.tissue.bers[, c('plasma_BER50', 'DIO1_BER', 'DIO2_BER', 'DIO3_BER', 'IYD_BER')], na.rm = T)
@@ -527,7 +532,7 @@ max.min.ber <- max(plasma.tissue.bers$min_BER)
 min.ber.lims <- c(floor(min.min.ber), ceiling(max.min.ber))
 max.uncertainty <- max(plasma.tissue.bers$uncertainty)
 
-seem3pp <- ggplot(data = plasma.tissue.bers[-3, ], 
+seem3pp <- ggplot(data = plasma.tissue.bers[-c(3,17), ], 
        mapping = aes(x = min_BER, 
                      y = uncertainty)) +
   geom_point(size = 3, alpha = 0.8) +
@@ -556,14 +561,16 @@ ggsave(plot = bers2,
        dpi = 300, 
        width = 18.53, height = 8.32, 
        device = "tiff", 
-       filename = "./figures/300dpi/BER_uncertainty-v2.tiff")
+       filename = "./figures/300dpi/BER_uncertainty-v3.tiff")
 
 ggsave(plot = bers2, 
        units = "in", 
        dpi = 300, 
        width = 18.53, height = 8.32, 
        device = "png", 
-       filename = "./figures/BER_uncertainty-v2.png")
+       filename = "./figures/BER_uncertainty-v3.png")
 
 
 ```
+
+
