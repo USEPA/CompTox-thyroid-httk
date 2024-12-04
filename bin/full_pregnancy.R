@@ -2,9 +2,8 @@
 
 library(httk)
 library(data.table)
-library(dplyr)
 library(ggplot2)
-library(stringr)
+library(dplyr)
 
 solve_full_pregnancy <- function(dtxsid, track.vars = NULL, plt = FALSE,
                            return.units = "amt",
@@ -66,7 +65,7 @@ solve_full_pregnancy <- function(dtxsid, track.vars = NULL, plt = FALSE,
                     "Aplacenta")
   
   # partition out chemical into fetal compts + placenta based on weights from KfVf
-  missing.vols <- str_replace(missing.amts, "^A", "V")
+  missing.vols <- sub("^A", "V", missing.amts)
   
   # get volumes from C model implementation
   vols.out <- solve_fetal_pbtk(dtxsid = dtxsid,
@@ -120,7 +119,7 @@ solve_full_pregnancy <- function(dtxsid, track.vars = NULL, plt = FALSE,
   
   # get full solution by concatenating 2 outputs
   full_sol <- bind_rows(data.frame(firsttri.out), data.frame(mod.fetal.out))
-
+  
   # add initial.values computed at day 91 from Aconceptus(13)
   # always return the solution with derived initial conds and fetal_pbtk solution at day 91
   full_sol[ind, c(missing.amts, "fAUC")] = initial.dat[c(missing.amts, "fAUC")]
@@ -178,10 +177,22 @@ solve_full_pregnancy <- function(dtxsid, track.vars = NULL, plt = FALSE,
                               variable.name = 'tissue', 
                               value.name = return.units)
       setDT(out.m)
+      out.m[, body := "maternal"]
+      out.m[tissue %in% colnames(out)[grep("^Cf", colnames(out))], body := "fetal"]
+      out.m[tissue %in% c("Cconceptus", "Cplacenta"), body := "conceptus"]
+      out.m[, tissue := sub("^C[f]*", "", tissue)]
+
+      # plot all compartments on a graph faceted by mother/fetus
+      all.tissues <- c(union(maternal_compts, fetal_compts), "conceptus", "placenta")
+      set3.colors <- brewer.pal(12, 'Set3') # max num of colors for Set 3 is 12
+      tissue.colors <- setNames(set3.colors, all.tissues[all.tissues != "gutlumen"])
+      tissue.colors <- c(tissue.colors, "#7FC97F")
+      names(tissue.colors)[13] = c("gutlumen")
       
       p <- ggplot(out.m[!is.na(get(return.units))], 
                   aes(x = time, y = log10(get(return.units)))) + 
         geom_point(aes(color = tissue)) +
+        scale_color_manual(values = tissue.colors) +
         facet_wrap(~body) + 
         theme_bw() + 
         labs(x = 'time (days)', y = 'Concentration (log10 uM)', 
