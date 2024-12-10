@@ -4,7 +4,7 @@
 # 
 # @author: Kimberly Truong
 # created: 5/30/24
-# updated: 11/12/24
+# updated: 12/10/24
 # ==============================================================================
 
 rm(list=ls())
@@ -16,10 +16,7 @@ library(ggplot2)
 library(latex2exp)
 library(cowplot)
 
-# load working function to run the full gestational model
-source("./bin/full_pregnancy.R")
-
-load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', verbose = TRUE)
+load('./data/invitrodb_v3_5_deiod_filtered_httk_121024.RData', verbose = TRUE)
 
 load_dawson2021() # most data for ToxCast chems
 load_sipes2017() # most data for pharma compounds 
@@ -45,10 +42,8 @@ max.diff <-  data.frame()
 
 for (i in 1:nrow(ivive.moe.tb)) {
   
-  cat('Calculating for chemical: ', ivive.moe.tb$chnm[i], '\n')
-  
   # output solution every hr
-  sol.out <- full_pregnancy(dtxsid = ivive.moe.tb$dtxsid[i],
+  sol.out <- solve_full_pregnancy(dtxsid = ivive.moe.tb$dtxsid[i],
                             daily.dose = 1, 
                             doses.per.day = 1,
                             time.course = seq(0, 40*7, 1/24),
@@ -117,11 +112,11 @@ Cdiff <- ggplot(max.diff.m,
                                 'Cfthyroid' = "#0072B2", 
                                 'Cconceptus' = "#009E73", 
                                 'Cfplasma' = "#D55E00")) +
-  annotate("rect", xmin = Inf, xmax = "Mesotrione", 
+  annotate("rect", xmin = Inf, xmax = "Pirimicarb", 
            ymin = -Inf, ymax = Inf, alpha = 0.2) +
-  annotate("text", x = 86, y = 3.3, label = "Protected by Cplasma", 
+  annotate("text", x = 86, y = 2.3, label = "Protected by Cplasma", 
            fontface = "bold", size = 14/.pt) +
-  annotate("text", x = 50, y = 3.3, label = "Cftissue > Cplasma", 
+  annotate("text", x = 50, y = 2.3, label = "Cftissue > Cplasma", 
            fontface = "bold", size = 14/.pt) +
   my_theme + 
   theme(axis.title = element_text(face = "bold"), 
