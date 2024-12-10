@@ -38,7 +38,7 @@ We need to load in the processed *in vitro* bioactivity data. This was done by `
 
 ```{r invitro-data}
 rm(list = ls())
-load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', verbose = TRUE)
+load('./data/invitrodb_v3_5_deiod_filtered_httk_121024.RData', verbose = TRUE)
 
 ```
 ### eval = execute.chunk 
@@ -66,7 +66,7 @@ library(scales)
 # IVIVE using 3-compartment steady state model
 
 ## Examine Chemicals
-Only 52 chemicals have experimental toxicokinetic (TK) parameters sufficient for *httk*. 
+Only 50 chemicals have experimental toxicokinetic (TK) parameters sufficient for *httk*. 
 ```{r exp-TK-chems, warning = FALSE}
 # how many chems had experimental TK params?
 human.data.pre <- subset(get_cheminfo(info = 'all', species = 'Human', 
@@ -92,10 +92,18 @@ human.httk.dt <- subset(ac50.dt, dsstox_substance_id %in% get_cheminfo(info = 'D
                                                                        species = 'Human', 
                                                                        model = '3compartmentss', 
                                                                        median.only = TRUE))
-# a lot of PFAS dropped out (n = 12)
+# a lot of PFAS dropped out (n = 13)
 setdiff(ac50.dt$chnm, human.httk.dt$chnm)
 
 missing.dtxsids <- setdiff(ac50.dt$dsstox_substance_id, human.httk.dt$dsstox_substance_id)
+
+```
+### Default to chems used previously (for now)
+```{r, eval = execute.chunk}
+e <- new.env(parent = emptyenv())
+(load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', envir = e))
+
+human.httk.dt <- subset(ac50.dt, dsstox_substance_id %in% e$ivive.moe.tb[, dtxsid])
 
 ```
 
@@ -180,21 +188,15 @@ rm(SEEM)
 # update RData file with BER_plasma data 
 # this helps save some time in knitting this vignette 
 e <- new.env(parent = emptyenv())
-(load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', envir = e))
+(load('./data/invitrodb_v3_5_deiod_filtered_httk_121024.RData', envir = e))
 e$ivive.moe.tb <- human.httk.dt2.seem3
 setnames(e$ivive.moe.tb, "dsstox_substance_id", "dtxsid")
 do.call("save", c(ls(envir = e),
-                  list(envir = e, file ='./data/invitrodb_v3_5_deiod_filtered_httk.RData')))
+                  list(envir = e, file ='./data/invitrodb_v3_5_deiod_filtered_httk_121024.RData')))
 
 ```
 
 # IVIVE using the Full Human Gestational Model
-
-### Custom function to run whole pregnancy (needs to be woven into *httk*)
-```{r preg-fn}
-source("./bin/full_pregnancy.R")
-
-```
 
 ### Compute half-lives
 ```{r half-lives, warning = FALSE}
@@ -266,9 +268,9 @@ for (i in names(tissue_list)) {
 ### Update RData file with tissue-based AEDs
 ```{r preg-aeds-RData, eval = execute.chunk}
 e <- new.env(parent = emptyenv())
-load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', envir = e)
+load('./data/invitrodb_v3_5_deiod_filtered_httk_121024.RData', envir = e)
 e$tissue.aeds <- tissue.aeds
-do.call("save", c(ls(envir = e), list(envir = e, file ='./data/invitrodb_v3_5_deiod_filtered_httk.RData')))
+do.call("save", c(ls(envir = e), list(envir = e, file ='./data/invitrodb_v3_5_deiod_filtered_httk_121024.RData')))
 
 ```
 
@@ -404,14 +406,14 @@ ggsave(plot = fig9,
        dpi = 300,
        width = 21.33, height = 11,
        device = "tiff",
-       filename = "./figures/300dpi/preg_prioritization_by_BER-v3.tiff")
+       filename = "./figures/300dpi/preg_prioritization_by_BER-v2.tiff")
 
 ggsave(plot = fig9,
        units = "in",
        dpi = 300,
        width = 21.33, height = 11,
        device = "png",
-       filename = "./figures/preg_prioritization_by_BER-v3.png")
+       filename = "./figures/preg_prioritization_by_BER-v2.png")
 
 ```
 
@@ -420,9 +422,9 @@ ggsave(plot = fig9,
 # update RData file with melted data for ggplot
 # i.e. chemicals ranked by tissue and lifestage-specific BERs with exposure estimates from ExpoCast
 e <- new.env(parent = emptyenv())
-load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', envir = e)
+load('./data/invitrodb_v3_5_deiod_filtered_httk_121024.RData', envir = e)
 e$tissue.bers <- new_dat
-do.call("save", c(ls(envir = e), list(envir = e, file ='./data/invitrodb_v3_5_deiod_filtered_httk.RData')))
+do.call("save", c(ls(envir = e), list(envir = e, file ='./data/invitrodb_v3_5_deiod_filtered_httk_121024.RData')))
 
 ```
 
@@ -561,14 +563,14 @@ ggsave(plot = bers2,
        dpi = 300, 
        width = 18.53, height = 8.32, 
        device = "tiff", 
-       filename = "./figures/300dpi/BER_uncertainty-v3.tiff")
+       filename = "./figures/300dpi/BER_uncertainty-v2.tiff")
 
 ggsave(plot = bers2, 
        units = "in", 
        dpi = 300, 
        width = 18.53, height = 8.32, 
        device = "png", 
-       filename = "./figures/BER_uncertainty-v3.png")
+       filename = "./figures/BER_uncertainty-v2.png")
 
 
 ```
