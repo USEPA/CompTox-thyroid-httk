@@ -8,7 +8,7 @@
 # 
 # @author: Kimberly Truong
 # created: 2/1/2023
-# updated: 11/12/2024
+# updated: 12/10/24
 # ==============================================================================
 
 rm(list=ls())
@@ -21,10 +21,7 @@ library(latex2exp)
 library(cowplot)
 library(viridis)
 
-# load working function to run the full gestational model
-source("./bin/full_pregnancy.R")
-
-load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', verbose = TRUE)
+load('./data/invitrodb_v3_5_deiod_filtered_httk_121024.RData', verbose = TRUE)
 
 load_dawson2021() # most data for ToxCast chems
 load_sipes2017() # most data for pharma compounds 
@@ -64,12 +61,9 @@ for(i in names(tissue_list)) {
 }
 
 for(i in 1:nrow(ivive.moe.tb)) {
-  
-  cat('Calculating for chemical: ', ivive.moe.tb$chnm[i], '\n')
-  
 
   # output solution every hr
-  sol.out <- full_pregnancy(dtxsid = ivive.moe.tb$dtxsid[i],
+  sol.out <- solve_full_pregnancy(dtxsid = ivive.moe.tb$dtxsid[i],
                             daily.dose = 1, 
                             doses.per.day = 1,
                             time.course = seq(0, 40*7, 1/24),
@@ -91,7 +85,7 @@ for(i in 1:nrow(ivive.moe.tb)) {
     chem.rvec <- subset(enz.df, dtxsid == ivive.moe.tb$dtxsid[i]) # this is still a dataframe obj of 1 row 
 
     if (nrow(chem.rvec) != 0) {
-      seem3.dose <- ivive.moe.tb[[i,'exposure95']]
+      seem3.dose <- ivive.moe.tb[[i,'seem3.u95']]
       enz.tissues <- tissue_list[[k]]
       # scaled.res <- sapply(sol.out[, enz.tissues], function(x) x*seem3.dose) # right scaling when looking at priority chems
       
@@ -279,7 +273,7 @@ ggsave(plot = fig,
 # update RData file with min times to reach Cmax in fetal vs. maternal tissues
 # as well as physicochemical property values
 e <- new.env(parent = emptyenv())
-load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', envir = e)
+load('./data/invitrodb_v3_5_deiod_filtered_httk_121024.RData', envir = e)
 e$ecdf.data <- ecdf.data
 e$physchem.tb <- physchem.tb
-do.call("save", c(ls(envir = e), list(envir = e, file ='./data/invitrodb_v3_5_deiod_filtered_httk.RData')))
+do.call("save", c(ls(envir = e), list(envir = e, file ='./data/invitrodb_v3_5_deiod_filtered_httk_121024.RData')))
