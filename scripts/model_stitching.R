@@ -6,11 +6,11 @@
 # 
 # @author: Kimberly Truong
 # created: 10/24/23
-# updated: 6/20/24
+# updated: 12/10/24
 # ==============================================================================
 
 rm(list=ls())
-library(httk) # fullterm_pregnancy branch (will be integrated into a future ver)
+library(httk)
 library(data.table)
 library(dplyr)
 library(tidyverse)
@@ -21,8 +21,6 @@ library(ggplot2)
 library(ggrepel)
 library(ggpubr)
 library(cowplot)
-
-`%notin%` <- Negate(`%in%`)
 
 # Show Mass/Volume Conservation at Week 13 transition --------------------------
 # estimate PK half-life of Fipronil
@@ -82,8 +80,10 @@ setDT(full.out)
 setDT(full.out2)
 
 # Show volume conservation at 13 weeks of gestational age 
-ggdata <- bind_rows(full.out[, c("time", "Vconceptus")], 
-                    full.out2[, c("time", "fBW", "Vplacenta", "Vamnf")])
+ggdata <- rbindlist(list(full.out[, c("time", "Vconceptus")], 
+                    full.out2[, c("time", "fBW", "Vplacenta", "Vamnf")]), 
+                    fill = TRUE
+                    )
 
 # convert to weeks 
 ggdata[, time := time / 7]
@@ -130,8 +130,8 @@ mass_dat[, time := time/7]
 mass_dat.m <- melt.data.table(mass_dat, 
                               id.vars = c("time"), 
                               variable.name = "mass")
-mass_dat.m[1:92, model := "1tri_pbtk"]
-mass_dat.m[93:282, model := "fetal_pbtk"]
+mass_dat.m[which(mass_dat.m$time <= 13), model := "1tri_pbtk"]
+mass_dat.m[which(mass_dat.m$time > 13), model := "fetal_pbtk"]
 
 masspp <- ggplot(mass_dat.m, 
        aes(x = time, y = value, color = model)) +
@@ -151,7 +151,7 @@ masspp <- ggplot(mass_dat.m,
 # Dynamical Kconceptus2pu parameter --------------------------------------------
 
 # load data from prioritization  
-load('./data/Deiodinases/deiod_invitrodbv3_5_filtered_ivive_fullterm_preg_branch.RData', verbose = TRUE)
+load('./data/invitrodb_v3_5_deiod_filtered_httk_121024.RData', verbose = TRUE)
 
 load_dawson2021() # most data for ToxCast chems
 load_sipes2017() # most data for pharma compounds
@@ -184,13 +184,13 @@ df$slopes <- (df$Kconceptus2pu_final-df$Kconceptus2pu_initial)/13
 
 # look at summary stats of slopes
 summary(df$slopes)
-#> Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
-#>-7048     -40      -4   66110       0 6034615 
+#> Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
+#> -7715.385   -31.744    -3.553  -268.152    -0.458  6130.769 
 
 # summary rounds up to the nearest int
 quantile(df$slopes, c = c(0, 0.25, 0.5, 0.75, 1))
 #> 0%           25%           50%           75%          100% 
-#>-7.047692e+03 -4.047692e+01 -3.591538e+00 -4.710769e-01  6.034615e+06 
+#> -7715.3846154   -31.7442308    -3.5531923    -0.4576154  6130.7692308 
  
 # log10 transform y axis 
 df[c("Kconceptus2pu_initial.log10", "Kconceptus2pu_final.log10")] <- lapply(df[c("Kconceptus2pu_initial", "Kconceptus2pu_final")], log10)
@@ -199,7 +199,7 @@ df$m <- (df$Kconceptus2pu_final.log10-df$Kconceptus2pu_initial.log10)/13
 ylims <- c(floor(min(df$Kconceptus2pu_initial.log10)), ceiling(max(df$Kconceptus2pu_final.log10)))
 
 # show only two example chems with +/- slopes 
-Kconc.pp <- ggplot(df[which(df$chnm %in% c("Retinol acetate", "Terbutylazine")),]) + 
+Kconc.pp <- ggplot(df[which(df$chnm %in% c("Ergocalciferol", "Terbutylazine")),]) + 
   geom_abline(aes(intercept = Kconceptus2pu_initial.log10, slope = m, color = factor(chnm)), 
               linewidth = 1.5) +
   scale_x_continuous(breaks = seq(0,13), 
@@ -207,13 +207,13 @@ Kconc.pp <- ggplot(df[which(df$chnm %in% c("Retinol acetate", "Terbutylazine")),
                      limits = c(0,13)) +
   scale_y_continuous(breaks = seq(ylims[1], ylims[2], 1), 
                      limits = ylims) +
-  scale_color_manual(values = c('Terbutylazine' = '#FFB900', 'Retinol acetate' = '#5773CC')) +
+  scale_color_manual(values = c('Terbutylazine' = '#FFB900', 'Ergocalciferol' = '#5773CC')) +
   labs(x = "Gestational Age (weeks)", y = TeX("$log_{10} K_{conceptus2pu}$")) +
   my_theme +
   theme(legend.position = "none") +
-  annotate("text", x = 11, y = 7.5, label = "Retinol acetate", 
+  annotate("text", x = 11, y = 5.5, label = "Ergocalciferol", 
            size = 5) +
-  annotate("text", x = 11, y = 1.75, label = "Terbutylazine", 
+  annotate("text", x = 11, y = 0.6, label = "Terbutylazine", 
            size = 5)
 
 # put it all together
@@ -232,12 +232,12 @@ ggsave(plot = fig,
        dpi = 300, 
        width = 8.1, height = 8.2, 
        device = "tiff", 
-       filename = "./doc/comptox-thyroid-httk/figures/model_stitching.tiff")
+       filename = "./figures/300dpi/model_stitching-v2.tiff")
 
 ggsave(plot = fig, 
        units = "in", 
        dpi = 300, 
        width = 8.1, height = 8.2, 
        device = "png", 
-       filename = "./doc/comptox-thyroid-httk/figures/model_stitching.png")
+       filename = "./figures/model_stitching-v2.png")
 
