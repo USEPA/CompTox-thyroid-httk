@@ -135,7 +135,9 @@ TK.data[, max.max_diff := NULL]
 # relative max is achieved in both Cfplasma and Cfliver for SR146131 trifluoroacetate (1:1) (DTXSID6047369)
 TK.data[, if(.N > 1) .SD, by = dtxsid]
 
-protective.chems <- TK.data[max_diff < 0.5, unique(dtxsid)]
+# Pirimicarb has diff of 0.5
+TK.data[, max_diff := round(max_diff,digits = 2)]
+protective.chems <- TK.data[max_diff <= 0.5, unique(dtxsid)]
 nonprotective.chems <- TK.data[max_diff > 0.5, unique(dtxsid)]
 parameters <- c("Clint", "Funbound.plasma", "Fraction_unbound_plasma_fetus", "Pow")
 

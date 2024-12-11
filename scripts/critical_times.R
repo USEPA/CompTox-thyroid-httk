@@ -175,6 +175,10 @@ cdfpp <- ggplot(ecdf.data, aes(min_tstar, color = body)) +
   labs(x = "Minimum Time to reach Cmax by Chemical (weeks of gestation)", 
        y = "Cumulative Frequency") 
 
+# How many chems reached Cmax in the mother by 1st tri? 
+ecdf.data[body == "maternal" & min_tstar < 13.01, length(unique(dtxsid))]
+#> [1] 82
+
 # Toxicokinetic Properties for Chems achieving Cmax in 1st vs 2nd Trimester-----
 
 # check the rank order of each CDF curve 
