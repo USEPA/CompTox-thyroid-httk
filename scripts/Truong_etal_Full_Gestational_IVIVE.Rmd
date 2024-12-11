@@ -23,7 +23,7 @@ This vignette covers the last step of the workflow "Targeted bioactivity:exposur
 This vignette reproduces Figures 9 and 10 from Truong et al. 2024.
 
 ## HTTK Version 
-This vignette was created with httk v2.3.0. This should be updated to the latest "main" branch of httk-dev. 
+This vignette was created with httk v2.6.0 (currently in development). 
 
 ## Prepare for session 
 ```{r configure-knitr}
@@ -99,7 +99,7 @@ missing.dtxsids <- setdiff(ac50.dt$dsstox_substance_id, human.httk.dt$dsstox_sub
 
 ```
 ### Default to chems used previously (for now)
-```{r, eval = execute.chunk}
+```{r default-chems, eval = execute.chunk}
 e <- new.env(parent = emptyenv())
 (load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', envir = e))
 
@@ -483,12 +483,15 @@ setnames(plasma.tissue.bers, old = colnames(plasma.tissue.bers)[3:8],
 plasma.tissue.bers <- plasma.tissue.bers[order(min_BER)]
 write.xlsx(plasma.tissue.bers, "./tables/plasma_and_tissueBERs.xlsx", colnames = T)
 
-# hide double label of Ergocalciferol 
-# this occurred because min AED for this chemical was achieved in both maternal/fetal thyr
-plasma.tissue.bers[which(plasma.tissue.bers$chnm %in% c("Ergocalciferol", "Morin hydrate"))[c(2,4)], chnm := NA_character_]
+plasma.tissue.bers[, if(.N > 1) .SD, by = dtxsid]
 
-max_ber <- max(plasma.tissue.bers[, c('plasma_BER50', 'DIO1_BER', 'DIO2_BER', 'DIO3_BER', 'IYD_BER')], na.rm = T)
-min_ber <- min(plasma.tissue.bers[, c('plasma_BER50', 'DIO1_BER', 'DIO2_BER', 'DIO3_BER', 'IYD_BER')], na.rm = T)
+# hide double label of 2,2'-Methylenebis(ethyl-6-tert-butylphenol)
+# this occurred because min AED for this chemical was achieved in both maternal/fetal thyr
+plasma.tissue.bers[which(plasma.tissue.bers$chnm == "2,2'-Methylenebis(ethyl-6-tert-butylphenol)")[2], 
+                   chnm := NA_character_]
+
+max_ber <- max(plasma.tissue.bers[, c('plasma_BER50', 'min_BER')], na.rm = T)
+min_ber <- min(plasma.tissue.bers[, c('plasma_BER50', 'min_BER')], na.rm = T)
 ber.lims <- c(floor(min_ber), ceiling(max_ber))
 
 # theme for the next 2 figures 
@@ -512,9 +515,12 @@ preg.vs.nonpreg.pp <- ggplot(data = plasma.tissue.bers, aes(x = plasma_BER50, y 
   geom_abline(slope = 1, linewidth = 1, linetype = 'solid', color = "#666666") +
   geom_abline(aes(slope = 1, intercept = 1), linetype = 'longdash', color = 'grey', linewidth = 1) + # default linesize = 1
   geom_abline(aes(slope = 1, intercept = -1), linetype = 'longdash', color = 'grey', linewidth = 1) +
-  geom_label_repel(aes(label = chnm), 
+  geom_label_repel(aes(label = chnm),
+                   data = plasma.tissue.bers[abs(plasma_BER50 - min_BER) > 1 | plasma_BER50 < 0][
+                     ! chnm %in% c("Farglitazar", "2-Chloro-N-phenylacetamide", "Fenoxaprop-P-ethyl", "Chlorhexidine diacetate") # ignore these since they're distracting
+                   ],
                    size = 5, 
-                   force = 28) +
+                   force = 65) +
   my_theme +
   theme(legend.position = 'bottom', 
         legend.direction = 'horizontal',
@@ -534,13 +540,13 @@ max.min.ber <- max(plasma.tissue.bers$min_BER)
 min.ber.lims <- c(floor(min.min.ber), ceiling(max.min.ber))
 max.uncertainty <- max(plasma.tissue.bers$uncertainty)
 
-seem3pp <- ggplot(data = plasma.tissue.bers[-c(3,17), ], 
+seem3pp <- ggplot(data = plasma.tissue.bers[-2, ], 
        mapping = aes(x = min_BER, 
                      y = uncertainty)) +
   geom_point(size = 3, alpha = 0.8) +
   geom_label_repel(aes(label = chnm),
                    data = subset(plasma.tissue.bers, min_BER < 0 | uncertainty > 4),
-                   force = 25,
+                   force = 50,
                    size = 5) +
   my_theme +
   theme(legend.position = 'bottom', 
@@ -553,7 +559,7 @@ seem3pp <- ggplot(data = plasma.tissue.bers[-c(3,17), ],
   labs(x = 'min BER by Chemical', y = TeX(r'($log_{10}ExpoCast_{u95} - log_{10}ExpoCast_{med}$)'))
 
 median(plasma.tissue.bers$min_BER[-3])
-#> [1] 3.38
+#> [1] 3.465
 
 bers2 <- plot_grid(preg.vs.nonpreg.pp, seem3pp, 
           labels = "AUTO", label_size = 20)
