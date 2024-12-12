@@ -4,7 +4,7 @@
 # 
 # @author: Kimberly Truong 
 # created: 12/7/23
-# updated: 6/26/24
+# updated: 12/11/24
 # ==============================================================================
 
 rm(list=ls())
@@ -18,7 +18,7 @@ library(ggrepel)
 library(latex2exp)
 library(cowplot)
 
-load('./data/Deiodinases/deiod_invitrodbv3_5_filtered_ivive_fullterm_preg_branch.RData', 
+load('./data/invitrodb_v3_5_deiod_filtered_httk_121024.RData', 
      verbose = TRUE)
 
 targets <- c("DIO1", "DIO2", "DIO3", "IYD")
@@ -28,22 +28,22 @@ pdata <- tissue.bers[variable == 'aed', .(dtxsid, chnm, variable, value)]
 pdata[, min_aed := min(value), by = .(dtxsid)]
 pdata <- pdata[order(dtxsid)]
 
-# take the min AED for each of the 97 chems 
+# take the min AED for each of the 98 chems 
 pdata2 <- unique(pdata[, .(dtxsid, chnm, min_aed)])
 
 # add in PODs from ToxValDB, if available 
-toxval <- read.xlsx('./doc/comptox-thyroid-httk/tables/toxval pods chemical level oral mgkgday.xlsx')
+toxval <- read.xlsx('./tables/toxval pods chemical level oral mgkgday.xlsx')
 toxval <- toxval %>% filter(dtxsid %in% pdata2$dtxsid)
 pdata2$pod <- log10(toxval$pod[match(pdata2$dtxsid, toxval$dtxsid)])
 pdata3 <- pdata2[which(!is.na(pdata2$pod)), ] 
 
-# 61 chems with complementary ToxValDB POD
+# 62 chems with complementary ToxValDB POD
 pdata3[, length(unique(dtxsid))]
-#> [1] 61
+#> [1] 62
 
 pod.min <- min(pdata3$min_aed, pdata3$pod)
 pod.max <- max(pdata3$min_aed, pdata3$pod)
-pod.lims <- c(-4.1, ceiling(pod.max))
+pod.lims <- c(floor(pod.min), ceiling(pod.max))
 
 # to standardize themes for both plots 
 my_theme <- theme_bw() +
@@ -59,8 +59,9 @@ toxval.pp <- ggplot(data = pdata3, aes(x = min_aed, y = pod)) +
   geom_abline(aes(slope = 1, intercept = -1), 
               linetype = 'longdash', color = 'grey', linewidth = 1) +
   geom_label_repel(aes(label = chnm), 
+                   data = pdata3[abs(pod - min_aed) > 1],
                    size = 4, 
-                   force = 18, max.overlaps = 9) +
+                   force = 40, max.overlaps = 9) +
   my_theme +
   scale_x_continuous(breaks = seq(-4, pod.lims[2], 1), 
                      limits = pod.lims) +
@@ -93,7 +94,7 @@ dio.aeds[, enzyme := NULL]
 
 # how many priority chems do we get from our workflow?
 dio.aeds[, length(unique(dtxsid))]
-#> [1] 42
+#> [1] 39
 
 priority.chems <- dio.aeds[, unique(dtxsid)]
 
@@ -230,12 +231,12 @@ ggsave(plot = pods.fig,
        dpi = 300, 
        width = 18.53, height = 8.32, 
        device = "tiff", 
-       filename = "./doc/comptox-thyroid-httk/figures/bioactivity_pods.tiff")
+       filename = "./figures/300dpi/bioactivity_pods-v2.tiff")
 
 ggsave(plot = pods.fig, 
        units = "in", 
        dpi = 300, 
        width = 18.53, height = 8.32, 
        device = "png", 
-       filename = "./doc/comptox-thyroid-httk/figures/bioactivity_pods.png")
+       filename = "./figures/bioactivity_pods-v2.png")
 

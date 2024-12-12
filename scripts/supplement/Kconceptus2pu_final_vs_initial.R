@@ -1,5 +1,5 @@
 # Comparing Kconceptus2pu_initial vs Kconceptus2pu_final for all 97 chemicals
-# updated: 7/24/24
+# updated: 12/12/24
 
 rm(list=ls())
 library(httk)
@@ -10,10 +10,8 @@ library(dplyr)
 library(tidyverse)
 library(latex2exp)
 
-`%notin%` <- Negate(`%in%`)
-
 # load data from prioritization for testing 
-load('./data/Deiodinases/deiod_invitrodbv3_5_filtered_ivive_fullterm_preg_branch.RData', 
+load('./data/invitrodb_v3_5_deiod_filtered_httk_121024.RData', 
      verbose = TRUE)
 
 load_dawson2021() # most data for ToxCast chems
@@ -57,7 +55,8 @@ endpoints.gg <- ggplot(df, aes(x = Kconceptus2pu_initial,
   geom_abline(aes(slope = 1, intercept = -1), linetype = 'longdash', color = 'red', linewidth = 1) +
   geom_label_repel(aes(label = chnm),
                    size = 3.5, 
-                   max.overlaps = 12) +
+                   force = 10,
+                   max.overlaps = 10) +
   labs(x = TeX("$log_{10} K_{conceptus}^{initial}$ = average of maternal tissue partition coeffs"), 
        y = TeX("$log_{10} K_{conceptus}^{final} = log_{10} K_{placenta2pu}$")) +
   my_theme
@@ -88,6 +87,6 @@ ggsave(plot = fig,
        dpi = 300, 
        width = 12.5, height = 5.55, 
        device = "jpg", 
-       filename = "./doc/comptox-thyroid-httk/figures/supp/Kconceptus2pu.jpg")
+       filename = "./figures/supp/Kconceptus2pu-v2.jpg")
 
 
