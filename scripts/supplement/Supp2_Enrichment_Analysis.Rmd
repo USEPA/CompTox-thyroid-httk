@@ -359,19 +359,9 @@ kable(res[[3]], caption = 'For DIO3')
 kable(res[[4]], caption = 'For IYD')
 ```
 
-## Supplemental File 2
-```{r}
-# output as Excel table with tabs 
-names(res)  <- aenm.abbrevs
-res$Classifications = classified_dt 
-
-write.xlsx(res, file = "./tables/Supp2_Class_Annotations&Enrichment_AllResults.xlsx")
-
-```
-
 ## Table 5 of Truong et al.  
 ```{r}
-sig.classes <- lapply(res[aenm.abbrevs], function(df) {
+sig.classes <- lapply(res, function(df) {
   sig <- df %>% 
     filter(padj < 0.05 & (Odds_Ratio > 3 | Odds_Ratio < 1/3)) %>% 
     select(Pval, padj, Odds_Ratio, Lower, Upper, group, `Actives in group`, `Inactives in group`)
@@ -396,7 +386,13 @@ kable(tb.paper,  caption = "Summary of Significant Results across all Targets")
 
 ```
 
+## Supplemental File 2
+```{r}
+# prep Excel output with tabs 
+names(res)  <- paste0(aenm.abbrevs, "-class")
+res$`class annotations` = classified_dt 
 
+```
 
 # Hits by Target {.tabset .tabset-fade .tabset-pills}
 ```{r, message = FALSE, warning = FALSE}
@@ -407,7 +403,7 @@ sig.or <- c("Quaternary ammonium salts", "Herbicide Chloroacetamide Very Long-Ch
             "Estrogen nonsteroidal", "Bisphenol", 
             "Estrogen flavonoid", "Antibiotic polyketide", 
             "Insecticide Arylalkyl organothiophosphate AChE Inhibitor", 
-            "Herbicide Triazine Inhbition of photosynthesis at PSll", 
+            "Herbicide Triazine Inhibition of photosynthesis at PSll", 
             "Insecticide Chlorinated cyclodiene GABA-gated chloride channel blocker", "PFAAs", 
             "1-hydroxy-2-unsubstituted benzenoids")
   
@@ -489,7 +485,7 @@ flavos.venn <- sigor_list$`Estrogen flavonoid` +
   annotate("text", x = 0, y = -2, label = "Estrogen flavonoids",
             size = 6, fontface= "bold") 
 
-triazine.venn <- sigor_list$`Herbicide Triazine Inhbition of photosynthesis at PSll` +
+triazine.venn <- sigor_list$`Herbicide Triazine Inhibition of photosynthesis at PSll` +
   annotate("text", x = 0, y = -2, label = "Herbicide Triazines Inhibition of photosynthesis at PSll",
             size = 6, fontface= "bold") 
 
@@ -782,6 +778,15 @@ kable(sig.res$DIO3, caption = 'For DIO3')
 ## IYD
 ```{r, echo = FALSE}
 kable(sig.res$IYD, caption = 'For IYD')
+```
+
+## Update Supplemental File 2
+```{r}
+names(tp.res) <- paste0(aenm.abbrevs, "-CT")
+tp.res$chemotypes <- toxprints
+
+write.xlsx(c(res,tp.res), file = "./tables/Supp2_Class&ToxPrint_Enrichment_AllResults.xlsx")
+
 ```
 
 ## compile results across targets  
@@ -1078,10 +1083,10 @@ ggsave(plot = fig,
        filename = "./figures/longchainc_panactive.png")
 
 # save to RData for later processing 
-save(longchainc.chems,
-     M.hitc,
-     classified_dt,
-     file = "./data/invitrodb_v3_5_deiod_Enrichment.RData")
+# save(longchainc.chems,
+#      M.hitc,
+#      classified_dt,
+#      file = "./data/invitrodb_v3_5_deiod_Enrichment.RData")
 
 ```
 
@@ -1553,3 +1558,8 @@ dio3.inactive
 
 ```
 
+# sessionInfo()
+```{r, echo = FALSE}
+sessionInfo()
+
+```
