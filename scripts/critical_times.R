@@ -8,7 +8,7 @@
 # 
 # @author: Kimberly Truong
 # created: 2/1/2023
-# updated: 12/10/24
+# updated: 3/7/2025
 # ==============================================================================
 
 rm(list=ls())
@@ -20,21 +20,13 @@ library(ggplot2)
 library(latex2exp)
 library(cowplot)
 library(viridis)
+library(openxlsx)
 
-load('./data/invitrodb_v3_5_deiod_filtered_httk_121024.RData', verbose = TRUE)
+load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', verbose = TRUE)
 
 load_dawson2021() # most data for ToxCast chems
 load_sipes2017() # most data for pharma compounds 
 load_pradeep2020() # best ML method for in silico prediction
-
-# compute half-lives
-for (i in 1:nrow(ivive.moe.tb)) {
-  ivive.moe.tb$half.life[i] <- calc_half_life(dtxsid = ivive.moe.tb$dtxsid[i]) # in hrs
-  ivive.moe.tb$half.life.days <- ivive.moe.tb$half.life/24 # in days
-}
-
-ivive.moe.tb$half.life.yrs <- ivive.moe.tb$half.life/24/30/12
-ivive.moe.tb$half.life.wks <- ivive.moe.tb$half.life/24/7
 
 # Main Script starts here ------------------------------------------------------
 
@@ -59,7 +51,7 @@ for(i in names(tissue_list)) {
 
   crit.times[[i]] <- empty.df
 }
-
+                     
 for(i in 1:nrow(ivive.moe.tb)) {
 
   # output solution every hr
@@ -67,13 +59,14 @@ for(i in 1:nrow(ivive.moe.tb)) {
                             daily.dose = 1, 
                             doses.per.day = 1,
                             time.course = seq(0, 40*7, 1/24),
-                            track.vars = impacted_tissues)
+                            track.vars = impacted_tissues, 
+                            physchem.exclude = FALSE)
 
   
   # function to find time to reach Cmax from scaled output dataframe   
   # acts on each column of the dataframe but also need the entire dataframe 
   find_threshold <- function(v, threshold, conc_df) {
-    e = 1e-2 
+    e = 1e-1
     ind <- which(abs(v-threshold) < e, arr.ind = TRUE)[1]
     return(conc_df$time[ind])
   }
@@ -133,21 +126,44 @@ new.times.list <- Map(melt_times, names(tissue_list), crit.times)
 times.m <- bind_rows(new.times.list)
 setDT(times.m)
 
-times.m[, body := "maternal"]
-times.m[substr(compt,1,2) == "Cf" | compt %in% c("Cconceptus", "Cplacenta"), body := "fetal"]
-View(times.m[, .SD, by = .(dtxsid, body)])
+times.m[, lifestage := "maternal"]
+times.m[substr(compt,1,2) == "Cf" | compt %in% c("Cconceptus", "Cplacenta"), lifestage := "fetal"]
+View(times.m[, .SD, by = .(dtxsid, lifestage)])
+
+# add this to Table 7
+targets <- c('DIO1', 'DIO2', 'DIO3', 'IYD')
+plasma.tissue.bers[, target := mapply(function(x) targets[x], 
+                                      apply(plasma.tissue.bers[, paste0(targets, "_BER"), with = FALSE], 1, which.min))]
+setnames(plasma.tissue.bers, "most_sensitive_tissue", "compt")
+
+table7 <- merge.data.table(plasma.tissue.bers, times.m[, -c("lifestage")], 
+                           by = c("dtxsid", "chnm", "target", "compt"), 
+                           all.x = TRUE) 
+
+# collapse multiple sensitive tissues and their tmaxes (time to reach Cmax in each tissue)
+table7[, most_sensitive_tissues := paste(compt, collapse = ", ") , by = .(dtxsid, target)]
+table7[, tmax := round(tmax, digits = 1)]
+table7[, day_at_Cmax := paste(tmax, collapse = ", "), by = .(dtxsid, target)]
+
+keep_cols <- c("dtxsid", "chnm", "plasma_BER50", 
+               paste0(targets, "_BER"), "min_BER", 
+               "most_sensitive_tissues", "day_at_Cmax")
+table7 <- unique(table7[, ..keep_cols])
+table7 <- table7[order(min_BER)]
+write.xlsx(table7, "./tables/preg_vs_nonpregBERs_v3.xlsx", colnames = T)
 
 # get the minimum day to reach Cmax for each chem x (maternal, fetal) tissue 
-ecdf.data <- times.m[times.m[, .I[tmax == min(tmax)], by = .(dtxsid, body)]$V1]
+ecdf.data <- times.m[times.m[, .I[tmax == min(tmax)], by = .(dtxsid, lifestage)]$V1]
 setnames(ecdf.data, old = "tmax", new = "min_tstar")
 
 ecdf.data$compt <- as.character(ecdf.data$compt)
-ecdf.data[, tissues := paste(unique(gsub("C[f]*", "", compt)), collapse = "; "), by = .(dtxsid, body)]
+ecdf.data[, tissues := paste(unique(gsub("C[f]*", "", compt)), collapse = "; "), by = .(dtxsid, lifestage)]
 ecdf.data <- unique(ecdf.data[, `:=` (compt = NULL, target = NULL)])
 
 # convert to weeks 
 ecdf.data[, min_tstar := (min_tstar/7)]
 
+# PLOTTING ECDF CURVES ---------------------------------------------------------
 # reuse theme aesthetics
 my_theme <-  theme_bw() + 
   theme(title = element_text(size = 14),
@@ -159,7 +175,7 @@ my_theme <-  theme_bw() +
 my_viridis_colors <- viridis(n = 3)
 
 # plot ECDF for times to reach Cmax in maternal vs fetal tissues
-cdfpp <- ggplot(ecdf.data, aes(min_tstar, color = body)) + 
+cdfpp <- ggplot(ecdf.data, aes(min_tstar, color = lifestage)) + 
   stat_ecdf(linewidth = 1) +
   scale_x_continuous(limits = c(0, 40), 
                      breaks = c(seq(0,10,2), 13, seq(15,40,5))) +
@@ -175,30 +191,30 @@ cdfpp <- ggplot(ecdf.data, aes(min_tstar, color = body)) +
   labs(x = "Minimum Time to reach Cmax by Chemical (weeks of gestation)", 
        y = "Cumulative Frequency") 
 
-# How many chems reached Cmax in the mother by 1st tri? 
-ecdf.data[body == "maternal" & min_tstar < 13.01, length(unique(dtxsid))]
-#> [1] 82
+# How many chems reached Cmax in the mother by 1st tri?  (88/103 = ~85%)
+ecdf.data[lifestage == "maternal" & min_tstar < 13, length(unique(dtxsid))]
+#> [1] 88
+
+# 16 chems reached Cmax in the mother in the 2nd-3rd tri 
+# but 14 of these reached Cmax in the very last week (why?)
+View(ecdf.data[min_tstar > 13 & lifestage == "maternal"])
 
 # Toxicokinetic Properties for Chems achieving Cmax in 1st vs 2nd Trimester-----
 
-# check the rank order of each CDF curve 
-fetal.order <- ecdf.data[body == "fetal"][order(min_tstar)]
-mat.order <- ecdf.data[body == "maternal"][order(min_tstar)]
-
 # let's see if chems are distinct toxicokinetically (1st vs 2nd trimester)
-set1 <- ecdf.data[body == "maternal" & min_tstar <= 13, dtxsid]
-set2 <- ecdf.data[body == "maternal" & min_tstar > 13, dtxsid]
+set1 <- ecdf.data[lifestage == "maternal" & min_tstar <= 13, dtxsid]
+set2 <- ecdf.data[lifestage == "maternal" & min_tstar > 13, dtxsid]
 
 parameters <- c("Clint", "Funbound.plasma", "Fraction_unbound_plasma_fetus", "Pow")
 
 # function to return specific parameter used in fetal_pbtk
-# recall that HTTK functions only work on a single chem at a time 
+# recall that HTTK functions only work on a single chem at a time
 get_param <- function(dtxsid, parameter) {
-  params <- parameterize_fetal_pbtk(dtxsid = dtxsid)
+  params <- parameterize_fetal_pbtk(dtxsid = dtxsid, physchem.exclude = FALSE)
   return(params[[parameter]])
 }
 
-# this was done once and saved in the RData file 
+# this was done once and saved in the RData file
 physchem.tb <- matrix(0, ncol = length(parameters), nrow = nrow(ivive.moe.tb))
 
 for(i in 1:nrow(ivive.moe.tb)) {
@@ -212,9 +228,6 @@ physchem.tb$dtxsid <- ivive.moe.tb$dtxsid
 physchem.tb$chnm <- ivive.moe.tb$chnm
 physchem.tb <- physchem.tb[, c("dtxsid", "chnm", parameters)]
 
-# make everything on a log10 scale
-physchem.tb[parameters] <- lapply(physchem.tb[parameters], log10)
-
 # melt data for violin plots
 ecdf.tk <- reshape2::melt(physchem.tb[, c("dtxsid", parameters[parameters != "Fraction_unbound_plasma_fetus"])], 
                           id.vars = c("dtxsid"), 
@@ -226,19 +239,30 @@ ecdf.tk <- ecdf.tk %>%
     dtxsid %in% set1 ~ "set1", 
     dtxsid %in% set2 ~ "set2"
   ))
-
 setDT(ecdf.tk)
+
+# convert to log10 scale
+ecdf.tk[, value := log10(value)]
 
 # Clint = 0 => log10(Clint) = -Inf <= -5 
 ecdf.tk[TK_prop == "Clint" & value == "-Inf", value := -5]
 
+# extract medians
+tk.medians <- ecdf.tk[, .(median = median(value)), by = .(TK_prop, flag)]
+tk.medians$prop_int <- as.numeric(tk.medians$TK_prop)
+tk.medians[flag == "set1", prop_int := prop_int - 0.5]
+tk.medians[flag == "set2", prop_int := prop_int + 0.03]
+setnames(tk.medians, "prop_int", "x1")
+
 # make the violin plots
 vpp <- ggplot(ecdf.tk, aes(x = TK_prop, y = value, fill = flag)) +
-  geom_violin(alpha = 0.5, 
-              draw_quantiles = c(0.5)) +
-  geom_point(position = position_jitterdodge(dodge.width = 1), 
-             alpha = 0.8, 
+  geom_violin(alpha = 0.5) + 
+              # draw_quantiles = c(0.5)) +
+  geom_point(position = position_jitterdodge(dodge.width = 1),
+             alpha = 0.8,
              show.legend = F) +
+  # geom_boxplot(position = position_dodge(width = 0.9), 
+  #   width=0.1, color="black", alpha=0.5) +
   scale_fill_manual(labels = c(TeX("$min(T^{*}_{m}) \\leq $ 13 weeks"), 
                                TeX("$min(T^{*}_{m}) >$ 13 weeks")), 
                       values = c("#E1BEE7", "#4A148C") ) +
@@ -248,7 +272,11 @@ vpp <- ggplot(ecdf.tk, aes(x = TK_prop, y = value, fill = flag)) +
   my_theme +
   guides(fill = guide_legend(position = "inside")) +
   theme(axis.text.x = element_text(angle = 60, vjust = 0.82, hjust = 0.80), 
-        legend.position.inside = c(0.17, 0.85))
+        legend.position.inside = c(0.17, 0.85)) +
+  geom_segment(
+               aes(x = x1, xend = x1 + 0.55, y = median, yend = median),
+               color = "red", linetype = "dashed", linewidth = 1, 
+               data = tk.medians)
 vpp 
 
 # put it all together
@@ -265,19 +293,80 @@ ggsave(plot = fig,
        dpi = 300, 
        width = 13.9, height = 8.1, 
        device = "tiff", 
-       filename = "./figures/300dpi/ecdf-v2.tiff")
+       filename = "./figures/300dpi/ecdf-v3.tiff")
 
 ggsave(plot = fig, 
        units = "in", 
        dpi = 300, 
        width = 13.9, height = 8.1, 
        device = "png", 
-       filename = "./figures/ecdf-v2.png")
+       filename = "./figures/ecdf-v3.png")
 
 # update RData file with min times to reach Cmax in fetal vs. maternal tissues
 # as well as physicochemical property values
 e <- new.env(parent = emptyenv())
-load('./data/invitrodb_v3_5_deiod_filtered_httk_121024.RData', envir = e)
+load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', envir = e)
+e$table7 <- table7
+e$Cmax.times.m <- times.m
 e$ecdf.data <- ecdf.data
 e$physchem.tb <- physchem.tb
-do.call("save", c(ls(envir = e), list(envir = e, file ='./data/invitrodb_v3_5_deiod_filtered_httk_121024.RData')))
+do.call("save", c(ls(envir = e), list(envir = e, file ='./data/invitrodb_v3_5_deiod_filtered_httk.RData')))
+
+# Investigating Chems that reach Cmax in the Mother End of Term ----------------
+
+Cmax.term.chems <- ecdf.data[min_tstar > 13 & lifestage == "maternal", dtxsid]
+
+# 15 out of 16 chems achieve Cmax at 39th week or later 
+# exceptions: 2-Chloro-N-phenylacetamide
+View(ecdf.data[lifestage == "maternal" & dtxsid %in% Cmax.term.chems])
+
+# 10 of these chems have Clint == 0 and all chems except 
+# 2-Chloro-N-phenylacetamide have Fup ~ 0
+View(physchem.tb[physchem.tb$dtxsid %in% Cmax.term.chems,])
+
+# examine some simulations
+# Kepone (DTXSID1020770): Clint = 0; Fup = 0
+# 2,2',6,6'-Tetrachlorobisphenol A (DTXSID3021770):  Clint = 511.1; fup = 0
+test.chem <- c("DTXSID3021770")
+
+# output solution every hr
+sol.out <- solve_full_pregnancy(dtxsid = test.chem,
+                                daily.dose = 1, 
+                                doses.per.day = 1,
+                                time.course = seq(0, 40*7, 1/24),
+                                track.vars = impacted_tissues, 
+                                physchem.exclude = FALSE)
+
+
+# function to find time to reach Cmax from scaled output dataframe   
+# acts on each column of the dataframe but also need the entire dataframe 
+find_threshold <- function(v, threshold, conc_df) {
+  e = 1e-2 
+  ind <- which(abs(v-threshold) < e, arr.ind = TRUE)[1]
+  return(conc_df$time[ind])
+}
+
+# for ith chem, find critical times for each target it was found to be 
+# a selective and potent hit for from invitrodb
+for (k in c("DIO3")) {
+  browser()
+  enz.df <- tissue.aeds[[k]]
+  chem.rvec <- subset(enz.df, dtxsid == test.chem) # this is still a dataframe obj of 1 row 
+  
+  if (nrow(chem.rvec) != 0) {
+    seem3.dose <- ivive.moe.tb[[which(ivive.moe.tb$dtxsid == test.chem),'seem3.u95']]
+    enz.tissues <- tissue_list[[k]]
+    # scaled.res <- sapply(sol.out[, enz.tissues], function(x) x*seem3.dose) # right scaling when looking at priority chems
+    
+    # scaled by tissue-specific AEDs
+    # this covers all chems 
+    scaled.res <- mapply(function(x,y) x*y, x = sol.out[, enz.tissues], y = chem.rvec[, enz.tissues]) 
+    scaled.res <- as.data.frame(scaled.res) # outputs as a list of columns 
+    scaled.res$time <- sol.out$time
+    
+    # find the tmax* for each relevant tissue (column) associated with a target
+    ans <- sapply(scaled.res[, enz.tissues], find_threshold, 
+                  threshold = ivive.moe.tb[[which(ivive.moe.tb$dtxsid == test.chem), k]], conc_df = scaled.res)
+  }
+  
+}

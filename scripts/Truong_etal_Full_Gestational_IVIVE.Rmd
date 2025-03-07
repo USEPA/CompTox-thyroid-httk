@@ -23,12 +23,11 @@ This vignette covers the last step of the workflow "Targeted bioactivity:exposur
 This vignette reproduces Figures 9 and 10 from Truong et al. 2024.
 
 ## HTTK Version 
-This vignette was created with httk v2.6.0 (currently in development). 
+This vignette was created with httk v2.5.0 (with new model functionality). 
 
-## Prepare for session 
-```{r configure-knitr}
+```{r configure-knitr, include = FALSE}
 # this runs on my local but this would have to be changed to the path of the dir you git cloned to
-knitr::opts_knit$set(root.dir = 'C:/Users/ktruong/OneDrive - Environmental Protection Agency (EPA)/Profile/Documents/thyroid_prioritization/doc/comptox-thyroid-httk')
+knitr::opts_knit$set(root.dir = 'C:/Users/ktruong/OneDrive - Environmental Protection Agency (EPA)/Profile/Documents/CompTox-thyroid-httk')
 options(rmarkdown.html_vignette.check_title = FALSE)
 
 ```
@@ -38,7 +37,7 @@ We need to load in the processed *in vitro* bioactivity data. This was done by `
 
 ```{r invitro-data}
 rm(list = ls())
-load('./data/invitrodb_v3_5_deiod_filtered_httk_121024.RData', verbose = TRUE)
+load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', verbose = TRUE)
 
 ```
 ### eval = execute.chunk 
@@ -76,6 +75,7 @@ human.data.pre <- subset(get_cheminfo(info = 'all', species = 'Human',
 nrow(human.data.pre)
 
 ```
+
 ### In silico predictions of TK parameters
 We need to supplement these with *in silico* predictions of TK parameters.
 ```{r insilico-preds, message=FALSE, warning=FALSE}
@@ -86,24 +86,33 @@ load_sipes2017() # most data for pharma compounds
 load_pradeep2020() # best ML method for in silico prediction 
 
 ```
+
 ### Examine missing chemicals 
 ```{r missing-chems, warning = FALSE}
 human.httk.dt <- subset(ac50.dt, dsstox_substance_id %in% get_cheminfo(info = 'DTXSID', 
                                                                        species = 'Human', 
                                                                        model = '3compartmentss', 
+                                                                       physchem.exclude = FALSE,  
                                                                        median.only = TRUE))
-# a lot of PFAS dropped out (n = 13)
-setdiff(ac50.dt$chnm, human.httk.dt$chnm)
+# layer class information to priority chemicals
+ac50.dt$class_type <- all_dat$class_type[match(ac50.dt$dsstox_substance_id, all_dat$dsstox_substance_id)]
+ac50.dt$chosen_class <- all_dat$chosen_class[match(ac50.dt$dsstox_substance_id, all_dat$dsstox_substance_id)]
 
 missing.dtxsids <- setdiff(ac50.dt$dsstox_substance_id, human.httk.dt$dsstox_substance_id)
 
+# a lot of PFAS dropped out (n = 13)
+knitr::kable(ac50.dt[dsstox_substance_id %in% missing.dtxsids, 
+                     .(dsstox_substance_id, chnm, class_type, chosen_class)])
+
 ```
-### Default to chems used previously (for now)
-```{r default-chems, eval = execute.chunk}
+
+```{r tech-review-chems, eval = execute.chunk, include = FALSE}
 e <- new.env(parent = emptyenv())
 (load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', envir = e))
 
-human.httk.dt <- subset(ac50.dt, dsstox_substance_id %in% e$ivive.moe.tb[, dtxsid])
+# these (98) chems were used in coauthor/tech review
+# one of these was a PFAS (DTXSID80379721) predicted by Dawson 2021 so should have been 97 
+#human.httk.dt <- subset(ac50.dt, dsstox_substance_id %in% e$ivive.moe.tb[, dtxsid])
 
 ```
 
@@ -127,29 +136,26 @@ for (i in 1:nrow(human.httk.dt)) {
                      which.quantile = c(0.5, 0.95), 
                      model = '3compartmentss', 
                      output.units = 'uM', 
+                     parameterize.arg.list=list(physchem.exclude=FALSE), 
                      suppress.messages = TRUE) # This does not work- report bug
   
   human.httk.dt$mc.css50[i] <- out["50%"]
-  # human.httk.df$mc.css95[i] <- out["95%"]
-  
+
   set.seed(123)
-  oralequiv.out <- calc_mc_oral_equiv(conc = human.httk.dt$min_ac50[i], 
+  oralequiv.out <- calc_mc_oral_equiv(conc = human.httk.dt$min_ac50[i],
                                       dtxsid = human.httk.dt$dsstox_substance_id[i], 
-                                      species = 'Human', 
-                                      which.quantile = c(0.5, 0.95), 
+                                      species = 'Human',
+                                      which.quantile = c(0.5, 0.95),
                                       input.units = 'uM',
                                       output.units = 'mgpkgpday',
-                                      model = '3compartmentss', 
-                                      restrictive.clearance = TRUE, 
+                                      model = '3compartmentss',
+                                      restrictive.clearance = TRUE,
+                                      parameterize.arg.list=list(physchem.exclude=FALSE),
                                       suppress.messages = TRUE)
   
-  human.httk.dt$oral_equiv50[i] <- oralequiv.out["50%"]
-  # human.httk.df$oral_equiv95[i] <- oralequiv.out["95%"]
-  
+   human.httk.dt$oral_equiv50[i] <- oralequiv.out["50%"]
 }                                                                
 
-# human.httk.df[, calc.aed95:= min_ac50 / mc.css95]
-# human.httk.df[, fold_diff95 := log10(oral_equiv95/calc.aed95)]
 human.httk.dt[, calc.aed50 := min_ac50/mc.css50]
 human.httk.dt[, fold_diff50 := log10(oral_equiv50/calc.aed50)]
 
@@ -181,29 +187,31 @@ human.httk.dt2.seem3[, log.pBER50 := log10(plasmaBER50)]
 # offload memory
 rm(SEEM)
 
-```
-
-### Update RData 
-```{r add-ivive-tb, eval = execute.chunk}
-# update RData file with BER_plasma data 
-# this helps save some time in knitting this vignette 
-e <- new.env(parent = emptyenv())
-(load('./data/invitrodb_v3_5_deiod_filtered_httk_121024.RData', envir = e))
-e$ivive.moe.tb <- human.httk.dt2.seem3
-setnames(e$ivive.moe.tb, "dsstox_substance_id", "dtxsid")
-do.call("save", c(ls(envir = e),
-                  list(envir = e, file ='./data/invitrodb_v3_5_deiod_filtered_httk_121024.RData')))
+ivive.moe.tb <- human.httk.dt2.seem3
+setnames(ivive.moe.tb, "dsstox_substance_id", "dtxsid")
 
 ```
 
 # IVIVE using the Full Human Gestational Model
 
 ### Compute half-lives
-```{r half-lives, warning = FALSE}
+```{r half-lives, warning = FALSE, eval = execute.chunk}
 for (i in 1:nrow(ivive.moe.tb)) {
-  ivive.moe.tb$half.life[i] <- calc_half_life(dtxsid = ivive.moe.tb$dtxsid[i]) # in hrs
+  ivive.moe.tb$half.life[i] <- calc_half_life(dtxsid = ivive.moe.tb$dtxsid[i], physchem.exclude = FALSE) # in hrs
   ivive.moe.tb$half.life.days <- ivive.moe.tb$half.life/24 # in days
 }
+
+```
+
+### Update RData with latest IVIVE data with half-life info
+```{r add-ivive-tb, eval = execute.chunk}
+# update RData file with BER_plasma data 
+# this helps save some time in knitting this vignette 
+e <- new.env(parent = emptyenv())
+(load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', envir = e))
+e$ivive.moe.tb <- ivive.moe.tb
+do.call("save", c(ls(envir = e),
+                  list(envir = e, file ='./data/invitrodb_v3_5_deiod_filtered_httk.RData')))
 
 ```
 
@@ -222,13 +230,12 @@ Cmax.tissues <- data.frame(matrix(NA, ncol = length(impacted_tissues) + 1,
 
 for(i in 1:nrow(ivive.moe.tb)) {
   
-  message('Calculating for chemical: ', ivive.moe.tb$chnm[i], '\n')
-  
   sol.out <- solve_full_pregnancy(dtxsid = ivive.moe.tb$dtxsid[i],
                             daily.dose = 1, 
                             doses.per.day = 1,
                             time.course = seq(0, 40*7, 1/24), # view solution by hour
-                            track.vars = impacted_tissues)
+                            track.vars = impacted_tissues, 
+                            physchem.exclude = FALSE)
 
   
   # get max of every column re: compt 
@@ -268,15 +275,15 @@ for (i in names(tissue_list)) {
 ### Update RData file with tissue-based AEDs
 ```{r preg-aeds-RData, eval = execute.chunk}
 e <- new.env(parent = emptyenv())
-load('./data/invitrodb_v3_5_deiod_filtered_httk_121024.RData', envir = e)
+load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', envir = e)
 e$tissue.aeds <- tissue.aeds
-do.call("save", c(ls(envir = e), list(envir = e, file ='./data/invitrodb_v3_5_deiod_filtered_httk_121024.RData')))
+do.call("save", c(ls(envir = e), list(envir = e, file ='./data/invitrodb_v3_5_deiod_filtered_httk.RData')))
 
 ```
 
 ## Figure 9: Priority Chemicals based on maternal-fetal BERs
 
-```{r fig9}
+```{r fig9-wrangling, eval = execute.chunk}
 impacted_tissues <- c('Cliver', 'Cthyroid', 'Cfliver', 'Cfbrain', 'Cfthyroid', 
                       'Cplacenta', 'Cconceptus', 'Cplasma')
 
@@ -305,151 +312,175 @@ get_ber_data <- function(name, df) {
 }
 
 new.list <- Map(get_ber_data, names(tissue.aeds), tissue.aeds)
-new_dat= bind_rows(new.list) 
-setDT(new_dat)
+ggdata = bind_rows(new.list) 
+setDT(ggdata)
 
-# order chemicals by the most sensitive tissue endpoint 
-new_dat[, min_ber := min(ber, na.rm = TRUE), keyby = .(enzyme, dtxsid)]
+# order chemicals within each enzyme group by the most sensitive tissue/lifestage BER
+ggdata[, min_ber := min(ber, na.rm = TRUE), keyby = .(enzyme, dtxsid)]
+ggdata <- ggdata[order(min_ber), .SD, keyby = .(enzyme)]
 
 # exposure values are dependent on dtxsid not httk compt 
-new_dat[variable == 'exposure', compt := 'exposure']
-new_dat[variable == 'aed' & min_ber == ber, most_sensitive_tissue := compt, by = .(enzyme, dtxsid)]
+ggdata[variable == 'exposure', compt := 'exposure']
 
-new_dat[compt %in% impacted_tissues[grep('f', impacted_tissues)], body := 'fetal']
-new_dat[compt %in% c('Cliver', 'Cthyroid'), body := 'maternal']
-new_dat[compt %in% c('Cplacenta', 'Cconceptus'), body := 'conceptus']
-new_dat[compt == "exposure", body := "exposure"]
+# make a deep copy or else it will be modified by reference 
+tissue.bers <- copy(ggdata)
 
-new_dat[compt %in% impacted_tissues[grep('liver', impacted_tissues)], 
-        tissue := 'liver']
-new_dat[compt %in% impacted_tissues[grep('thyroid', impacted_tissues)], 
-        tissue := 'thyroid']
-new_dat[compt == 'Cfbrain', tissue := 'brain']
-new_dat[compt == 'Cplacenta', tissue := 'placenta']
-new_dat[compt == "Cconceptus", tissue := 'conceptus']
-new_dat[compt == 'exposure', tissue := 'exposure'] 
+# round all numerical values including BERs to 2 sigfigs 
+num.cols <- c("value", "ber", "min_ber")
+tissue.bers[, c(num.cols) := lapply(.SD, signif, digits = 2), .SDcols = num.cols]
 
-# convert tissue and body variables to factors
-new_cols <- c('body', 'tissue')
-new_dat[, (new_cols) := lapply(.SD, factor), .SDcols = new_cols]
-new_dat <- new_dat[order(min_ber), .SD, keyby = .(enzyme)]
+```
 
-min_val <- new_dat[min_ber < 3, min(value), by = enzyme][, min(V1)]
-max_val <- new_dat[value != "Inf" & min_ber < 3, max(value), by = enzyme][, max(V1)]
-ylims <- c(floor(min_val), ceiling(max_val))
+```{r fig9-plt}
+min_val <- tissue.bers[min_ber <= 3, min(value), by = enzyme][, min(V1)]
+max_val <- tissue.bers[min_ber <= 3, max(value), by = enzyme][, max(V1)]
+ylims <- c(min_val, max_val)
 
-# generate a set of 3 viridis colors for lifestage
+# generate a set of 3 viridis colors for lifestage 
+# yellow represents neither maternal or fetal, i.e., conceptus
 my_viridis_colors <- viridis(n = 3)
-
-# change order of tissue and body for plotting purposes 
-new_dat$body <- factor(new_dat$body, levels = c("conceptus", "fetal", "maternal", "exposure"))
-new_dat$tissue <- factor(new_dat$tissue, levels = c("conceptus", "placenta", "thyroid", "brain", "liver", "exposure"))
 
 listgg <- list()
 for(k in names(tissue.aeds)) {
   
-  aeds <- new_dat[enzyme == k & ber < 3]
-  chems <- new_dat[enzyme == k & ber < 3, dtxsid]
-  exposures <- new_dat[enzyme == k & variable == "exposure" & dtxsid %in% chems]
+  aeds <- tissue.bers[enzyme == k & ber <= 3]
+  chems <- tissue.bers[enzyme == k & ber <= 3, dtxsid]
+  exposures <- tissue.bers[enzyme == k & variable == "exposure" & dtxsid %in% chems]
   
-  listgg[[k]] <- ggplot(data = rbind(aeds, exposures), 
+  listgg[[k]] <- ggplot(data = rbind(aeds,exposures), 
                         mapping = aes(x = reorder(chnm, -min_ber), 
                                       y = value)) +
-    geom_point(aes(shape = tissue, color = body), 
+    geom_point(aes(shape = compt, color = compt), 
                alpha = 0.65, size = 3, stroke = 1.15, 
                show.legend = T) +
-    scale_shape_manual(values = c('brain' = 19,
+    scale_y_continuous(breaks = seq(ylims[1], ylims[2], 1),
+                       limits = ylims) +
+    scale_shape_manual(name = "Compartment corresponding to AED \n or Exposure", 
+                       labels = c("maternal liver", "fetal liver", 
+                                  "maternal thyroid", "fetal thyroid", 
+                                  "conceptus", 
+                                  "fetal brain", 
+                                  "placenta", "exposure"),
+                       values = c('Cfbrain' = 19,
                                   'exposure' = 18, 
-                                  'liver' = 17,
-                                  'placenta' = 15, 
-                                  'thyroid' = 8, 
-                                  'conceptus' = 6),
+                                  'Cliver' = 17,
+                                  'Cfliver' = 17, 
+                                  'Cplacenta' = 15, 
+                                  'Cthyroid' = 8,
+                                  'Cfthyroid' = 8, 
+                                  'Cconceptus' = 6), 
                        drop = F) + # this makes sure all levels of a factor are displayed even if unused 
-    scale_color_manual(values = c('maternal' = my_viridis_colors[1], 'fetal' = my_viridis_colors[2], 
-                                  'conceptus' = my_viridis_colors[3], 'exposure' = "dimgrey")) +
+    scale_color_manual(name = "Compartment corresponding to AED \n or Exposure", 
+                       labels = c("maternal liver", "fetal liver", 
+                                  "maternal thyroid", "fetal thyroid", 
+                                  "conceptus", 
+                                  "fetal brain", 
+                                  "placenta", "exposure"),
+                       values = c('Cfbrain' = my_viridis_colors[2],
+                                  'exposure' = 'dimgrey', 
+                                  'Cliver' = my_viridis_colors[1],
+                                  'Cfliver' = my_viridis_colors[2], 
+                                  'Cplacenta' = 'pink', 
+                                  'Cthyroid' = my_viridis_colors[1],
+                                  'Cfthyroid' = my_viridis_colors[2], 
+                                  'Cconceptus' = my_viridis_colors[3]), 
+                       drop = F) +
     labs(x = 'Chemical', y = 'Oral AED or Exposure (log10 mg/kg-bw/day)', title = k) +
     theme_bw() +
-    theme(legend.position = "none",
+    theme(legend.position = "none", 
           plot.title = element_text(size = 18, face = "bold"), 
           axis.title = element_text(size = 16), 
-          legend.title = element_blank(), 
           axis.text = element_text(size = 14), 
-          legend.text = element_text(size = 14)) +
-    scale_y_continuous(breaks = seq(ylims[1], ylims[2], 1), 
-                       limits = ylims) +
+          legend.text = element_text(size = 14), 
+          legend.title = element_text(size = 13, hjust = 0.5)) +
     coord_flip()
 }
 
 # remove extra axis labels 
 listgg$IYD <- listgg$IYD + labs(x = '', y = '')
 listgg$DIO3 <- listgg$DIO3 + 
-  labs(x = '') + 
-  theme(axis.text.y = element_text(size = 13))
-
+  labs(x = '') 
 listgg$DIO1 <- listgg$DIO1 + labs(y = '')
-listgg$DIO2 <- listgg$DIO2 + 
+
+# arrange DIO1 and DIO2 with equal sizes since they have 14 chems each
+pcol1 <- plot_grid(listgg$DIO1, listgg$DIO2, 
+                  align = "hv", nrow = 2)
+
+# make DIO3 3x taller than IYD (30 chems vs 3)
+pcol2 <- plot_grid(listgg$IYD, listgg$DIO3, 
+                   align = "hv", nrow = 2, 
+                   rel_heights = c(1,3))
+
+# combine two columns of plots
+prow <- plot_grid(pcol1, pcol2, 
+                    align = "h", ncol = 2, 
+                    rel_widths = c(1,1))
+
+grobs <- ggplotGrob(
+  listgg$DIO2 + 
   guides(
     shape = guide_legend(ncol = 2, byrow = F), 
     color = guide_legend(ncol = 2, byrow = F)
   ) +
-  theme(legend.position = "bottom",
-   legend.direction = "horizontal")
+  theme(legend.position = "bottom")
+  )$grobs
+legend2 <- grobs[[which(sapply(grobs, function(x) x$name) == "guide-box")]]
 
-fig9 <- ggdraw() +
-  draw_plot(listgg$DIO1, x = 0, y = 0.5, width = 0.5, height = 0.5) +
-  draw_plot(listgg$DIO2, x = 0, y = 0, width = 0.5, height = 0.5) +
-  draw_plot(listgg$IYD, x = 0.52, y = 0.75, width = 0.48, height = 0.25) +
-  draw_plot(listgg$DIO3, x = 0.5, y = 0, width = 0.5, height = 0.75)
+# add the legend underneath the plots; make it 10% of the height of the combined plots
+fig9 <- plot_grid(prow, legend2, 
+          nrow = 2, rel_heights = c(1,0.1))
 
 ggsave(plot = fig9,
        units = "in",
        dpi = 300,
        width = 21.33, height = 11,
        device = "tiff",
-       filename = "./figures/300dpi/preg_prioritization_by_BER-v2.tiff")
+       filename = "./figures/300dpi/preg_prioritization_by_BER-v3.tiff")
 
 ggsave(plot = fig9,
        units = "in",
        dpi = 300,
-       width = 21.33, height = 11,
+       width = 21.33, height = 13,
        device = "png",
-       filename = "./figures/preg_prioritization_by_BER-v2.png")
+       filename = "./figures/preg_prioritization_by_BER-v3.png")
 
 ```
 
 ### update RData File with maternal-fetal BERs
 ```{r mat-fet-bers-Rdata, eval = execute.chunk}
 # update RData file with melted data for ggplot
-# i.e. chemicals ranked by tissue and lifestage-specific BERs with exposure estimates from ExpoCast
+# i.e. chemicals ranked by the most sensitive tissue and lifestage-specific BERs with exposure estimates from ExpoCast
 e <- new.env(parent = emptyenv())
-load('./data/invitrodb_v3_5_deiod_filtered_httk_121024.RData', envir = e)
-e$tissue.bers <- new_dat
-do.call("save", c(ls(envir = e), list(envir = e, file ='./data/invitrodb_v3_5_deiod_filtered_httk_121024.RData')))
+load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', envir = e)
+e$tissue.bers <- tissue.bers
+do.call("save", c(ls(envir = e), list(envir = e, file ='./data/invitrodb_v3_5_deiod_filtered_httk.RData')))
 
 ```
 
-# Comparing IVIVE models for BER prioritization 
+# Comparing IVIVE models based on BER prioritization 
 
-## Figure 10: Understanding and Interpreting Maternal-Fetal BERs 
-```{r fig10, warning = FALSE}
+## Table 7 
+```{r table-7, warning = FALSE}
 targets <- c('DIO1', 'DIO2', 'DIO3', 'IYD')
 
-# table matching scatterplot subplots with all calculated BERs
-# every enzyme x chem x min BER constitutes a row 
-enzxchem.tb <- tissue.bers[!is.na(most_sensitive_tissue), 
-                       .(chnm, min_ber, most_sensitive_tissue, body, tissue), by = .(enzyme, dtxsid)]
-# rows ordered by enzyme and within each enzyme group, ordered by min_ber 
-enzxchem.tb.sorted <- enzxchem.tb[order(min_ber), .SD, keyby = .(enzyme)] 
+# DATA WRANGLING
+tissue.bers[min_ber == ber, most_sensitive_tissue := compt]
 
-# collapse multiple most-sensitive tissues 
-# this really only applies to Ergocalciferol 
-melt.foreach.dio <- enzxchem.tb.sorted[, most_sensitive_compts := paste(most_sensitive_tissue, collapse = ", "), by = .(enzyme, dtxsid)][, .(chnm, min_ber, most_sensitive_compts), by = .(enzyme, dtxsid)]
-melt.foreach.dio2 <- unique(melt.foreach.dio)
+# table matching order of chemicals in enzyme subplots with all calculated BERs
+# every enzyme x chem x min BER constitutes a row 
+minber.by.chem <- tissue.bers[!is.na(most_sensitive_tissue), 
+                       .(chnm, min_ber, most_sensitive_tissue), by = .(enzyme, dtxsid)]
+
+# check if there are multiple most-sensitive tissues per chem in each enzyme group 
+minber.by.chem[, if(.N > 1) .SD, by = .(enzyme, dtxsid)][, length(unique(dtxsid))] #63 chems
+
+# collapse multiple most-sensitive tissues per chem in each enzyme group
+min.ber.reduced <- minber.by.chem[, most_sensitive_compts := paste(most_sensitive_tissue, collapse = ", "), by = .(enzyme, dtxsid)][, .(chnm, min_ber, most_sensitive_compts), by = .(enzyme, dtxsid)]
+min.ber.reduced <- unique(min.ber.reduced)
 
 # min BER matrix
-min.ber.mat <- dcast(melt.foreach.dio2[, 1:4], 
+min.ber.mat <- dcast(min.ber.reduced[, 1:4], 
                      dtxsid + chnm ~ enzyme, value.var = c('min_ber'))
-setDT(min.ber.mat)
 min.ber.mat[, min_across_enzyme := pmin(DIO1, DIO2, DIO3, IYD, na.rm = T)]
 min.ber.mat <- min.ber.mat[order(min_across_enzyme)]
 
@@ -457,23 +488,20 @@ min.ber.mat <- min.ber.mat[order(min_across_enzyme)]
 min.ber.mat[, enzyme := mapply(function(x) targets[x], apply(min.ber.mat[, targets, with = FALSE], 1, which.min))]
 
 # merge data on most sensitive tissues reflecting min BER 
-# this ensures an extra row for Ergocalciferol to represent the multiple sensitive tissue endpoints 
 new.ranking.tissues <- merge.data.table(min.ber.mat, 
-                                 enzxchem.tb.sorted, 
+                                 minber.by.chem[, .(dtxsid, chnm, enzyme, min_ber, most_sensitive_tissue)], 
                                  by = c('dtxsid', 'chnm', 'enzyme'), 
                                  all.x = TRUE)
 setnames(new.ranking.tissues, old = 'enzyme', new = 'target_min')
 
-# round all BERs to 2 decimal places for easy table viewing 
-ranked.by.plasma50 <- ivive.moe.tb[, lmoe50 := round(log.pBER50, digits = 2)][order(lmoe50)]
+# round all BERs to 2 sigfigs for easy table viewing 
+ranked.by.plasma <- ivive.moe.tb[, lmoe50 := signif(log.pBER50, digits = 2)][order(lmoe50)]
 
-final.new.ranking <- new.ranking.tissues[, -c("target_min", "min_ber", "most_sensitive_compts")]
-final.new.ranking[, c(targets, "min_across_enzyme") := lapply(.SD, round, digits = 2), 
-                  by = seq_len(nrow(final.new.ranking)), .SDcols = c(targets, "min_across_enzyme")]
+final.new.ranking <- new.ranking.tissues[, -c("target_min", "min_ber")]
 final.new.ranking <- final.new.ranking[order(min_across_enzyme)]
 
-# comparing tissue BER with plasma BER from 3compss model 
-plasma.tissue.bers <- merge.data.table(ranked.by.plasma50[, c('dtxsid', 'chnm', 'lmoe50')], 
+# comparing tissue BERs from full preg model with plasma BERs from 3compss model 
+plasma.tissue.bers <- merge.data.table(ranked.by.plasma[, c('dtxsid', 'chnm', 'lmoe50')], 
                            final.new.ranking[, -c('chnm')], 
                            by = c('dtxsid'))
 
@@ -481,17 +509,33 @@ setnames(plasma.tissue.bers, old = colnames(plasma.tissue.bers)[3:8],
          new = c('plasma_BER50', 'DIO1_BER', 'DIO2_BER', 'DIO3_BER', 'IYD_BER', 'min_BER'))
 
 plasma.tissue.bers <- plasma.tissue.bers[order(min_BER)]
-write.xlsx(plasma.tissue.bers, "./tables/plasma_and_tissueBERs.xlsx", colnames = T)
+# write.xlsx(plasma.tissue.bers, "./tables/preg_vs_nonpregBERs_v3.xlsx", colnames = T)
 
-plasma.tissue.bers[, if(.N > 1) .SD, by = dtxsid]
+```
 
-# hide double label of 2,2'-Methylenebis(ethyl-6-tert-butylphenol)
-# this occurred because min AED for this chemical was achieved in both maternal/fetal thyr
-plasma.tissue.bers[which(plasma.tissue.bers$chnm == "2,2'-Methylenebis(ethyl-6-tert-butylphenol)")[2], 
-                   chnm := NA_character_]
+### update RData File with Table 7
+```{r 3compss-vs-preg-bers-Rdata, eval = execute.chunk}
+# update RData with Table 7 (preg vs non-preg BERs)
+e <- new.env(parent = emptyenv())
+load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', envir = e)
+e$plasma.tissue.bers <- plasma.tissue.bers
+do.call("save", c(ls(envir = e), list(envir = e, file ='./data/invitrodb_v3_5_deiod_filtered_httk.RData')))
 
-max_ber <- max(plasma.tissue.bers[, c('plasma_BER50', 'min_BER')], na.rm = T)
-min_ber <- min(plasma.tissue.bers[, c('plasma_BER50', 'min_BER')], na.rm = T)
+```
+
+## Figure 10: Understanding and Interpreting Maternal-Fetal BERs
+```{r fig10}
+# merge min BER with plasma BER for each chem with unique row for each row
+# ignoring multiple sensitive tissues
+ber.comp <- merge.data.table(ranked.by.plasma[, c('dtxsid', 'chnm', 'lmoe50')], 
+                             min.ber.mat[, -c("chnm")], 
+                             by = c("dtxsid"))
+
+setnames(ber.comp, old = colnames(ber.comp)[3:8], 
+         new = c('plasma_BER50', 'DIO1_BER', 'DIO2_BER', 'DIO3_BER', 'IYD_BER', 'min_BER'))
+
+max_ber <- max(ber.comp[, c('plasma_BER50', 'min_BER')], na.rm = T)
+min_ber <- min(ber.comp[, c('plasma_BER50', 'min_BER')], na.rm = T)
 ber.lims <- c(floor(min_ber), ceiling(max_ber))
 
 # theme for the next 2 figures 
@@ -500,27 +544,18 @@ my_theme <- theme_bw() +
         axis.text = element_text(size = 12), 
         legend.text = element_text(size = 12))
   
-preg.vs.nonpreg.pp <- ggplot(data = plasma.tissue.bers, aes(x = plasma_BER50, y = min_BER)) +
+preg.vs.nonpreg.pp <- ggplot(data = ber.comp, aes(x = plasma_BER50, y = min_BER)) +
   geom_point(alpha = 0.75, size = 3, 
              show.legend = T) +
-  # scale_shape_manual(values = c('brain' = 19,
-  #                               'liver' = 17,
-  #                               'placenta' = 15, 
-  #                               'thyroid' = 8, 
-  #                               'conceptus' = 7), 
-  #                    drop = F) + # this makes sure all levels of a factor are displayed even if unused 
-  # scale_color_manual(values = c('maternal' = 'darkviolet', 
-  #                               'fetal' = 'forestgreen', 
-  #                               conceptus = 'pink')) +
   geom_abline(slope = 1, linewidth = 1, linetype = 'solid', color = "#666666") +
   geom_abline(aes(slope = 1, intercept = 1), linetype = 'longdash', color = 'grey', linewidth = 1) + # default linesize = 1
   geom_abline(aes(slope = 1, intercept = -1), linetype = 'longdash', color = 'grey', linewidth = 1) +
   geom_label_repel(aes(label = chnm),
-                   data = plasma.tissue.bers[abs(plasma_BER50 - min_BER) > 1 | plasma_BER50 < 0][
-                     ! chnm %in% c("Farglitazar", "2-Chloro-N-phenylacetamide", "Fenoxaprop-P-ethyl", "Chlorhexidine diacetate") # ignore these since they're distracting
+                   data = ber.comp[abs(plasma_BER50 - min_BER) > 1 | plasma_BER50 < 0][
+                     ! chnm %in% c("2-Chloro-N-phenylacetamide") # this label is a bit distracting
                    ],
-                   size = 5, 
-                   force = 65) +
+                   size = 5,
+                   force = 120) +
   my_theme +
   theme(legend.position = 'bottom', 
         legend.direction = 'horizontal',
@@ -531,21 +566,24 @@ preg.vs.nonpreg.pp <- ggplot(data = plasma.tissue.bers, aes(x = plasma_BER50, y 
                      limits = ber.lims) +
   labs(x = 'plasma BER using 3compss model', y = 'min BER across DIO/IYD targets and tissues')
 
+# how many chems to the right of y = x?
+ber.comp[plasma_BER50 > min_BER, .N] #65 chems 
+
 # plot SEEM3 uncertainty
 ivive.moe.tb$uncertainty = log10(ivive.moe.tb$seem3.u95/ivive.moe.tb$seem3)
-plasma.tissue.bers$uncertainty <- ivive.moe.tb$uncertainty[match(plasma.tissue.bers$dtxsid, ivive.moe.tb$dtxsid)]
+ber.comp$uncertainty <- ivive.moe.tb$uncertainty[match(ber.comp$dtxsid, ivive.moe.tb$dtxsid)]
 
-min.min.ber <- min(plasma.tissue.bers$min_BER)
-max.min.ber <- max(plasma.tissue.bers$min_BER)
+min.min.ber <- min(ber.comp$min_BER)
+max.min.ber <- max(ber.comp$min_BER)
 min.ber.lims <- c(floor(min.min.ber), ceiling(max.min.ber))
-max.uncertainty <- max(plasma.tissue.bers$uncertainty)
+max.uncertainty <- max(ber.comp$uncertainty)
 
-seem3pp <- ggplot(data = plasma.tissue.bers[-2, ], 
+seem3pp <- ggplot(data = ber.comp, 
        mapping = aes(x = min_BER, 
                      y = uncertainty)) +
   geom_point(size = 3, alpha = 0.8) +
   geom_label_repel(aes(label = chnm),
-                   data = subset(plasma.tissue.bers, min_BER < 0 | uncertainty > 4),
+                   data = subset(ber.comp, min_BER < 0 | uncertainty > 4),
                    force = 50,
                    size = 5) +
   my_theme +
@@ -558,8 +596,8 @@ seem3pp <- ggplot(data = plasma.tissue.bers[-2, ],
                      limits = c(0, ceiling(max.uncertainty))) +
   labs(x = 'min BER by Chemical', y = TeX(r'($log_{10}ExpoCast_{u95} - log_{10}ExpoCast_{med}$)'))
 
-median(plasma.tissue.bers$min_BER[-3])
-#> [1] 3.465
+median(ber.comp$min_BER)
+#> [1] 3.6
 
 bers2 <- plot_grid(preg.vs.nonpreg.pp, seem3pp, 
           labels = "AUTO", label_size = 20)
@@ -569,14 +607,14 @@ ggsave(plot = bers2,
        dpi = 300, 
        width = 18.53, height = 8.32, 
        device = "tiff", 
-       filename = "./figures/300dpi/BER_uncertainty-v2.tiff")
+       filename = "./figures/300dpi/BER_uncertainty-v3.tiff")
 
 ggsave(plot = bers2, 
        units = "in", 
        dpi = 300, 
        width = 18.53, height = 8.32, 
        device = "png", 
-       filename = "./figures/BER_uncertainty-v2.png")
+       filename = "./figures/BER_uncertainty-v3.png")
 
 
 ```
