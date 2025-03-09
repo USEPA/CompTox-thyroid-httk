@@ -118,7 +118,7 @@ Cdiff <- ggplot(max.diff.m,
            ymin = -Inf, ymax = Inf, alpha = 0.2) +
   annotate("text", x = 89, y = 2.3, label = "Protected by Cplasma", 
            fontface = "bold", size = 14/.pt) +
-  annotate("text", x = 37, y = 2.3, label = "Cftissue > Cplasma", 
+  annotate("text", x = 41, y = 2.3, label = "Cftissue > Cplasma", 
            fontface = "bold", size = 14/.pt) +
   my_theme + 
   theme(axis.title = element_text(face = "bold"), 
@@ -222,8 +222,8 @@ ggsave(plot = fig,
        device = "png", 
        filename = "./figures/is_Cplasma_protective-v3.png")
 
-# update RData file with max differences 
-e <- new.env(parent = emptyenv())
-load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', envir = e)
-e$max.diff <- max.diff
-do.call("save", c(ls(envir = e), list(envir = e, file ='./data/invitrodb_v3_5_deiod_filtered_httk.RData')))
+# # update RData file with max differences 
+# e <- new.env(parent = emptyenv())
+# load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', envir = e)
+# e$max.diff <- max.diff
+# do.call("save", c(ls(envir = e), list(envir = e, file ='./data/invitrodb_v3_5_deiod_filtered_httk.RData')))
