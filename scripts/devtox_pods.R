@@ -61,7 +61,7 @@ toxval.pp <- ggplot(data = pdata3, aes(x = min_aed, y = pod)) +
   geom_label_repel(aes(label = chnm), 
                    data = pdata3[abs(pod - min_aed) > 1],
                    size = 4, 
-                   force = 50, max.overlaps = 9) +
+                   force = 65, max.overlaps = 9) +
   my_theme +
   scale_x_continuous(breaks = seq(pod.lims[1], pod.lims[2], 1), 
                      limits = pod.lims) +
