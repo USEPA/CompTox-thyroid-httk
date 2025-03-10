@@ -12,7 +12,7 @@
 
 <meta name="author" content="Kimberly Truong" />
 
-<meta name="date" content="2025-03-05" />
+<meta name="date" content="2025-03-10" />
 
 <title>Truong et al. (2024): Using Thyroid-Related Bioactivity Data for Full Human Gestational IVIVE</title>
 
@@ -341,7 +341,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <h1 class="title toc-ignore">Truong et al. (2024): Using Thyroid-Related
 Bioactivity Data for Full Human Gestational IVIVE</h1>
 <h4 class="author">Kimberly Truong</h4>
-<h4 class="date">2025-03-05</h4>
+<h4 class="date">2025-03-10</h4>
 
 
 
@@ -388,11 +388,14 @@ results were saved in the
 <pre><code>## Loading objects:
 ##   ac50.dt
 ##   all_dat
+##   Cmax.times.m
 ##   ecdf.data
 ##   ivive.moe.tb
+##   max.diff
 ##   physchem.tb
 ##   plasma.tissue.bers
 ##   sel
+##   table7
 ##   tissue.aeds
 ##   tissue.bers</code></pre>
 <div id="eval-execute.chunk" class="section level3">
@@ -472,16 +475,19 @@ parameters.</p>
 <span id="cb13-11"><a href="#cb13-11" tabindex="-1"></a></span>
 <span id="cb13-12"><a href="#cb13-12" tabindex="-1"></a><span class="co"># a lot of PFAS dropped out (n = 13)</span></span>
 <span id="cb13-13"><a href="#cb13-13" tabindex="-1"></a>knitr<span class="sc">::</span><span class="fu">kable</span>(ac50.dt[dsstox_substance_id <span class="sc">%in%</span> missing.dtxsids, </span>
-<span id="cb13-14"><a href="#cb13-14" tabindex="-1"></a>                     .(dsstox_substance_id, chnm, class_type, chosen_class)])</span></code></pre></div>
+<span id="cb13-14"><a href="#cb13-14" tabindex="-1"></a>                     .(dsstox_substance_id, chnm, class_type, chosen_class)], </span>
+<span id="cb13-15"><a href="#cb13-15" tabindex="-1"></a>             <span class="at">row.names =</span> T)</span></code></pre></div>
 <table>
 <colgroup>
+<col width="2%" />
 <col width="15%" />
-<col width="46%" />
+<col width="45%" />
 <col width="8%" />
-<col width="29%" />
+<col width="28%" />
 </colgroup>
 <thead>
 <tr class="header">
+<th align="left"></th>
 <th align="left">dsstox_substance_id</th>
 <th align="left">chnm</th>
 <th align="left">class_type</th>
@@ -490,84 +496,98 @@ parameters.</p>
 </thead>
 <tbody>
 <tr class="odd">
+<td align="left">1</td>
 <td align="left">DTXSID00194615</td>
 <td align="left">1H,1H,9H-Perfluorononyl acrylate</td>
 <td align="left">PFAS</td>
 <td align="left">Other aliphatics</td>
 </tr>
 <tr class="even">
+<td align="left">2</td>
 <td align="left">DTXSID00893171</td>
 <td align="left">Xanthohumol</td>
 <td align="left">ClassyFire</td>
 <td align="left">Chalcones and dihydrochalcones</td>
 </tr>
 <tr class="odd">
+<td align="left">3</td>
 <td align="left">DTXSID1038298</td>
 <td align="left">1-Hydroxypyrene</td>
 <td align="left">ClassyFire</td>
 <td align="left">Pyrenes</td>
 </tr>
 <tr class="even">
+<td align="left">4</td>
 <td align="left">DTXSID30170109</td>
 <td align="left">3,3-Bis(trifluoromethyl)-2-propenoic acid</td>
 <td align="left">ClassyFire</td>
 <td align="left">Fatty acids and conjugates</td>
 </tr>
 <tr class="odd">
+<td align="left">5</td>
 <td align="left">DTXSID3038939</td>
 <td align="left">Perfluorooctanesulfonamide</td>
 <td align="left">PFAS</td>
 <td align="left">PFAA precursors</td>
 </tr>
 <tr class="even">
+<td align="left">6</td>
 <td align="left">DTXSID5027140</td>
 <td align="left">Perfluorooctanesulfonyl fluoride</td>
 <td align="left">PFAS</td>
 <td align="left">PFAA precursors</td>
 </tr>
 <tr class="odd">
+<td align="left">7</td>
 <td align="left">DTXSID50375114</td>
 <td align="left">Perfluoro-3,6,9-trioxatridecanoic acid</td>
 <td align="left">PFAS</td>
 <td align="left">PFAAs</td>
 </tr>
 <tr class="even">
+<td align="left">8</td>
 <td align="left">DTXSID50469320</td>
 <td align="left">Perfluorohexanesulfonamide</td>
 <td align="left">PFAS</td>
 <td align="left">PFAA precursors</td>
 </tr>
 <tr class="odd">
+<td align="left">9</td>
 <td align="left">DTXSID5060986</td>
 <td align="left">1H,1H,5H,5H-Perfluoro-1,5-pentanediol diacrylate</td>
 <td align="left">PFAS</td>
 <td align="left">Other aliphatics</td>
 </tr>
 <tr class="even">
+<td align="left">10</td>
 <td align="left">DTXSID5061954</td>
 <td align="left">11-H-Perfluoroundecanoic acid</td>
 <td align="left">PFAS</td>
 <td align="left">Other aliphatics</td>
 </tr>
 <tr class="odd">
+<td align="left">11</td>
 <td align="left">DTXSID70880230</td>
 <td align="left">((2,2,3,3-Tetrafluoropropoxy)methyl)oxirane</td>
 <td align="left">PFAS</td>
 <td align="left">Other aliphatics</td>
 </tr>
 <tr class="even">
+<td align="left">12</td>
 <td align="left">DTXSID8037706</td>
 <td align="left">Potassium perfluorooctanesulfonate</td>
 <td align="left">PFAS</td>
 <td align="left">PFAAs</td>
 </tr>
 <tr class="odd">
+<td align="left">13</td>
 <td align="left">DTXSID80379721</td>
 <td align="left">1H,1H,6H,6H-Perfluorohexane-1,6-diol diacrylate</td>
 <td align="left">PFAS</td>
 <td align="left">Other aliphatics</td>
 </tr>
 <tr class="even">
+<td align="left">14</td>
 <td align="left">DTXSID8044969</td>
 <td align="left">Methyl
 perfluoro(3-(1-ethenyloxypropan-2-yloxy)propanoate)</td>
@@ -575,18 +595,21 @@ perfluoro(3-(1-ethenyloxypropan-2-yloxy)propanoate)</td>
 <td align="left">Other aliphatics</td>
 </tr>
 <tr class="odd">
+<td align="left">15</td>
 <td align="left">DTXSID8059920</td>
 <td align="left">Perfluoroheptanesulfonic acid</td>
 <td align="left">PFAS</td>
 <td align="left">PFAAs</td>
 </tr>
 <tr class="even">
+<td align="left">16</td>
 <td align="left">DTXSID80863216</td>
 <td align="left">3-Nitro-L-tyrosine</td>
 <td align="left">ClassyFire</td>
 <td align="left">Amino acids, peptides, and analogues</td>
 </tr>
 <tr class="odd">
+<td align="left">17</td>
 <td align="left">DTXSID90880131</td>
 <td align="left">1H,1H,5H-Perfluoropentyl methacrylate</td>
 <td align="left">PFAS</td>
@@ -966,7 +989,7 @@ AED = \frac{AC_{50}}{CSS_{50}}
 <span id="cb26-33"><a href="#cb26-33" tabindex="-1"></a>         <span class="at">new =</span> <span class="fu">c</span>(<span class="st">&#39;plasma_BER50&#39;</span>, <span class="st">&#39;DIO1_BER&#39;</span>, <span class="st">&#39;DIO2_BER&#39;</span>, <span class="st">&#39;DIO3_BER&#39;</span>, <span class="st">&#39;IYD_BER&#39;</span>, <span class="st">&#39;min_BER&#39;</span>))</span>
 <span id="cb26-34"><a href="#cb26-34" tabindex="-1"></a></span>
 <span id="cb26-35"><a href="#cb26-35" tabindex="-1"></a>plasma.tissue.bers <span class="ot">&lt;-</span> plasma.tissue.bers[<span class="fu">order</span>(min_BER)]</span>
-<span id="cb26-36"><a href="#cb26-36" tabindex="-1"></a><span class="fu">write.xlsx</span>(plasma.tissue.bers, <span class="st">&quot;./tables/preg_vs_nonpregBERs_v3.xlsx&quot;</span>, <span class="at">colnames =</span> T)</span></code></pre></div>
+<span id="cb26-36"><a href="#cb26-36" tabindex="-1"></a><span class="co"># write.xlsx(plasma.tissue.bers, &quot;./tables/preg_vs_nonpregBERs_v3.xlsx&quot;, colnames = T)</span></span></code></pre></div>
 <div id="update-rdata-file-with-table-7" class="section level3">
 <h3>update RData File with Table 7</h3>
 <div class="sourceCode" id="cb27"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" tabindex="-1"></a><span class="co"># update RData with Table 7 (preg vs non-preg BERs)</span></span>
