@@ -1,5 +1,5 @@
-# Comparing Kconceptus2pu_initial vs Kconceptus2pu_final for all 97 chemicals
-# updated: 12/12/24
+# Comparing Kconceptus2pu_initial vs Kconceptus2pu_final for all 103 chemicals
+# updated: 3/10/25
 
 rm(list=ls())
 library(httk)
@@ -11,7 +11,7 @@ library(tidyverse)
 library(latex2exp)
 
 # load data from prioritization for testing 
-load('./data/invitrodb_v3_5_deiod_filtered_httk_121024.RData', 
+load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', 
      verbose = TRUE)
 
 load_dawson2021() # most data for ToxCast chems
@@ -22,7 +22,7 @@ parameters <- c("Kconceptus2pu_initial", "Kconceptus2pu_final")
 
 # function to return specific parameter used in 1tri_pbtk
 get_param <- function(dtxsid, parameter) {
-    params <- parameterize_1tri_pbtk(dtxsid = dtxsid)
+    params <- parameterize_1tri_pbtk(dtxsid = dtxsid, physchem.exclude = FALSE)
     return(params[[parameter]])
 }
 
@@ -42,6 +42,7 @@ df <- df[, c("dtxsid", "chnm", parameters)]
 # log10 transform the data first 
 df[c("Kconceptus2pu_initial", "Kconceptus2pu_final")] <- lapply(df[c("Kconceptus2pu_initial", "Kconceptus2pu_final")], log10)
 df$m <- (df$Kconceptus2pu_final - df$Kconceptus2pu_initial)/13
+setDT(df)
 
 my_theme <-  theme_bw() + 
   theme(axis.title = element_text(size = 16),
@@ -54,8 +55,9 @@ endpoints.gg <- ggplot(df, aes(x = Kconceptus2pu_initial,
   geom_abline(aes(slope = 1, intercept = 1), linetype = 'longdash', color = 'red', linewidth = 1) + # default linesize = 1
   geom_abline(aes(slope = 1, intercept = -1), linetype = 'longdash', color = 'red', linewidth = 1) +
   geom_label_repel(aes(label = chnm),
+                   data = df[Kconceptus2pu_initial < -0.1 | Kconceptus2pu_initial > 5],
                    size = 3.5, 
-                   force = 10,
+                   force = 500,
                    max.overlaps = 10) +
   labs(x = TeX("$log_{10} K_{conceptus}^{initial}$ = average of maternal tissue partition coeffs"), 
        y = TeX("$log_{10} K_{conceptus}^{final} = log_{10} K_{placenta2pu}$")) +
@@ -87,6 +89,6 @@ ggsave(plot = fig,
        dpi = 300, 
        width = 12.5, height = 5.55, 
        device = "jpg", 
-       filename = "./figures/supp/Kconceptus2pu-v2.jpg")
+       filename = "./figures/supp/Kconceptus2pu-v3.jpg")
 
 

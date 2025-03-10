@@ -6,7 +6,7 @@
 # 
 # @author: Kimberly Truong
 # created: 10/24/23
-# updated: 12/10/24
+# updated: 3/10/25
 # ==============================================================================
 
 rm(list=ls())
@@ -151,7 +151,7 @@ masspp <- ggplot(mass_dat.m,
 # Dynamical Kconceptus2pu parameter --------------------------------------------
 
 # load data from prioritization  
-load('./data/invitrodb_v3_5_deiod_filtered_httk_121024.RData', verbose = TRUE)
+load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', verbose = TRUE)
 
 load_dawson2021() # most data for ToxCast chems
 load_sipes2017() # most data for pharma compounds
@@ -162,7 +162,7 @@ parameters <- c("Kconceptus2pu_initial", "Kconceptus2pu_final")
 # function to return specific parameter used in 1tri_pbtk
 # recall that HTTK functions only work on a single chem at a time 
 get_param <- function(dtxsid, parameter) {
-  params <- parameterize_1tri_pbtk(dtxsid = dtxsid)
+  params <- parameterize_1tri_pbtk(dtxsid = dtxsid, physchem.exclude = FALSE)
   return(params[[parameter]])
 }
 
@@ -184,13 +184,13 @@ df$slopes <- (df$Kconceptus2pu_final-df$Kconceptus2pu_initial)/13
 
 # look at summary stats of slopes
 summary(df$slopes)
-#> Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
-#> -7715.385   -31.744    -3.553  -268.152    -0.458  6130.769 
+#>      Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
+#> -7715.385   -31.415    -3.592  -256.537    -0.462  6130.769 
 
 # summary rounds up to the nearest int
 quantile(df$slopes, c = c(0, 0.25, 0.5, 0.75, 1))
-#> 0%           25%           50%           75%          100% 
-#> -7715.3846154   -31.7442308    -3.5531923    -0.4576154  6130.7692308 
+#>           0%           25%           50%           75%          100% 
+#>-7715.3846154   -31.4146154    -3.5915385    -0.4623077  6130.7692308
  
 # log10 transform y axis 
 df[c("Kconceptus2pu_initial.log10", "Kconceptus2pu_final.log10")] <- lapply(df[c("Kconceptus2pu_initial", "Kconceptus2pu_final")], log10)
@@ -232,12 +232,12 @@ ggsave(plot = fig,
        dpi = 300, 
        width = 8.1, height = 8.2, 
        device = "tiff", 
-       filename = "./figures/300dpi/model_stitching-v2.tiff")
+       filename = "./figures/300dpi/model_stitching-v3.tiff")
 
 ggsave(plot = fig, 
        units = "in", 
        dpi = 300, 
        width = 8.1, height = 8.2, 
        device = "png", 
-       filename = "./figures/model_stitching-v2.png")
+       filename = "./figures/model_stitching-v3.png")
 
