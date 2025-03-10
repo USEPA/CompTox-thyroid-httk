@@ -16,7 +16,7 @@ In this vignette, we show how to use the full human gestational model from *httk
 
 Truong et al. 2024 describes a prioritization workflow for thyroid-related bioactivity data related to deiodinase inhibition and applies the full human gestational model to compute administered equivalent doses (AEDs) and bioactivity-to-exposure ratios (BERs) by integrating SEEM3 ExpoCast predictions. The figure below shows an overview of the workflow. 
 
-![Figure 1 from *Truong et al.*](../figures/fig1-workflow-v2.png){width=100%}
+![Figure 1 from *Truong et al.*](../figures/fig1-workflow-v3.png){width=100%}
 
 This vignette covers the last step of the workflow "Targeted bioactivity:exposure ratios", and the previous three steps are done by executing `deiod_invitrodb_v3_5_processing.R`.
 
