@@ -59,8 +59,8 @@ names(h.deiod.aenm) <- aenm.abbrevs
 # get efficacy/potency fields for each
 sc.deiod <- sc2[aeid %in% h.deiod.aeids & !is.na(dsstox_substance_id), 
                 .(casn, chnm, hitc, max_med), keyby = .(aeid, dsstox_substance_id)]
-mc.deiod <- mc5[aeid %in% h.deiod.aeids & !is.na(dsstox_substance_id), 
-                      .(casn, chnm, hitc, modl_acc, modl_ga), keyby = .(aeid, dsstox_substance_id)]
+mc.deiod <- mc5[aeid %in% h.deiod.aeids & !is.na(dsstox_substance_id) & use.me %in% c(1,NA), # filtering for mc6 flags
+                      .(casn, chnm, hitc, modl_acc, modl_ga, use.me), keyby = .(aeid, dsstox_substance_id)]
 
 # calculate selectivity for mc data 
 mc.acc <- mc.deiod[, .(hitc, modl_acc), by = .(dsstox_substance_id, aeid)]
@@ -188,7 +188,7 @@ all_dat[mc.hitc == 1, .N, keyby = deiodinase_type]
 1-(15/119)
 #> [1] 0.8739496
 
-# 11% were mixtures/UVCBs
+# 11% were mixtures/UVCBs (n = 15)
 sel2 <- sel[has_smile == 1][
   order(-selectivity), .SD, keyby = deiodinase_type] 
 
@@ -201,9 +201,6 @@ sel2[, .N, by = deiodinase_type]
 
 sel2[, length(unique(dsstox_substance_id))]
 #> [1] 120
-
-length(unique(sel$dsstox_substance_id))
-#> [1] 135
 
 # AC50 table by chem x aeid  
 sel2[, ac50_uM := 10^modl_ga]
