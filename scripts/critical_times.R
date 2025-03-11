@@ -123,12 +123,12 @@ melt_times <- function(name, df) {
 }
 
 new.times.list <- Map(melt_times, names(tissue_list), crit.times)
-times.m <- bind_rows(new.times.list)
-setDT(times.m)
+Cmax.times.m <- bind_rows(new.times.list)
+setDT(Cmax.times.m)
 
-times.m[, lifestage := "maternal"]
-times.m[substr(compt,1,2) == "Cf" | compt %in% c("Cconceptus", "Cplacenta"), lifestage := "fetal"]
-View(times.m[, .SD, by = .(dtxsid, lifestage)])
+Cmax.times.m[, lifestage := "maternal"]
+Cmax.times.m[substr(compt,1,2) == "Cf" | compt %in% c("Cconceptus", "Cplacenta"), lifestage := "fetal"]
+View(Cmax.times.m[, .SD, by = .(dtxsid, lifestage)])
 
 # add this to Table 7
 targets <- c('DIO1', 'DIO2', 'DIO3', 'IYD')
@@ -136,7 +136,7 @@ plasma.tissue.bers[, target := mapply(function(x) targets[x],
                                       apply(plasma.tissue.bers[, paste0(targets, "_BER"), with = FALSE], 1, which.min))]
 setnames(plasma.tissue.bers, "most_sensitive_tissue", "compt")
 
-table7 <- merge.data.table(plasma.tissue.bers, times.m[, -c("lifestage")], 
+table7 <- merge.data.table(plasma.tissue.bers, Cmax.times.m[, -c("lifestage")], 
                            by = c("dtxsid", "chnm", "target", "compt"), 
                            all.x = TRUE) 
 
@@ -153,7 +153,7 @@ table7 <- table7[order(min_BER)]
 write.xlsx(table7, "./tables/preg_vs_nonpregBERs_v3.xlsx", colnames = T)
 
 # get the minimum day to reach Cmax for each chem x (maternal, fetal) tissue 
-ecdf.data <- times.m[times.m[, .I[tmax == min(tmax)], by = .(dtxsid, lifestage)]$V1]
+ecdf.data <- Cmax.times.m[Cmax.times.m[, .I[tmax == min(tmax)], by = .(dtxsid, lifestage)]$V1]
 setnames(ecdf.data, old = "tmax", new = "min_tstar")
 
 ecdf.data$compt <- as.character(ecdf.data$compt)
@@ -195,8 +195,8 @@ cdfpp <- ggplot(ecdf.data, aes(min_tstar, color = lifestage)) +
 ecdf.data[lifestage == "maternal" & min_tstar < 13, length(unique(dtxsid))]
 #> [1] 88
 
-# 16 chems reached Cmax in the mother in the 2nd-3rd tri 
-# but 14 of these reached Cmax in the very last week (why?)
+# 15 chems reached Cmax in the mother in the 2nd-3rd tri 
+# but 13 of these chems reached Cmax in 37th-39th weeks
 View(ecdf.data[min_tstar > 13 & lifestage == "maternal"])
 
 # Toxicokinetic Properties for Chems achieving Cmax in 1st vs 2nd Trimester-----
@@ -241,18 +241,20 @@ ecdf.tk <- ecdf.tk %>%
   ))
 setDT(ecdf.tk)
 
+# capture medians before log10 transformation
+tk.medians <- ecdf.tk[, .(median = median(value)), by = .(TK_prop, flag)]
+tk.medians$median.log <- log10(tk.medians$median)
+tk.medians[median.log == -Inf, median.log := -5]
+tk.medians$prop_int <- as.numeric(tk.medians$TK_prop)
+tk.medians[flag == "set1", prop_int := prop_int - 0.5]
+tk.medians[flag == "set2", prop_int := prop_int + 0.03]
+setnames(tk.medians, "prop_int", "x1")
+
 # convert to log10 scale
 ecdf.tk[, value := log10(value)]
 
 # Clint = 0 => log10(Clint) = -Inf <= -5 
 ecdf.tk[TK_prop == "Clint" & value == "-Inf", value := -5]
-
-# extract medians
-tk.medians <- ecdf.tk[, .(median = median(value)), by = .(TK_prop, flag)]
-tk.medians$prop_int <- as.numeric(tk.medians$TK_prop)
-tk.medians[flag == "set1", prop_int := prop_int - 0.5]
-tk.medians[flag == "set2", prop_int := prop_int + 0.03]
-setnames(tk.medians, "prop_int", "x1")
 
 # make the violin plots
 vpp <- ggplot(ecdf.tk, aes(x = TK_prop, y = value, fill = flag)) +
@@ -274,7 +276,7 @@ vpp <- ggplot(ecdf.tk, aes(x = TK_prop, y = value, fill = flag)) +
   theme(axis.text.x = element_text(angle = 60, vjust = 0.82, hjust = 0.80), 
         legend.position.inside = c(0.17, 0.85)) +
   geom_segment(
-               aes(x = x1, xend = x1 + 0.55, y = median, yend = median),
+               aes(x = x1, xend = x1 + 0.55, y = median.log, yend = median.log),
                color = "red", linetype = "dashed", linewidth = 1, 
                data = tk.medians)
 vpp 
@@ -307,7 +309,7 @@ ggsave(plot = fig,
 e <- new.env(parent = emptyenv())
 load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', envir = e)
 e$table7 <- table7
-e$Cmax.times.m <- times.m
+e$Cmax.times.m <- Cmax.times.m
 e$ecdf.data <- ecdf.data
 e$physchem.tb <- physchem.tb
 do.call("save", c(ls(envir = e), list(envir = e, file ='./data/invitrodb_v3_5_deiod_filtered_httk.RData')))
