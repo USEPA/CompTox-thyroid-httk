@@ -434,7 +434,7 @@ fig9 <- plot_grid(prow, legend2,
 ggsave(plot = fig9,
        units = "in",
        dpi = 300,
-       width = 21.33, height = 11,
+       width = 21.33, height = 13,
        device = "tiff",
        filename = "./figures/300dpi/preg_prioritization_by_BER-v3.tiff")
 
