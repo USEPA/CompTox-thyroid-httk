@@ -318,8 +318,8 @@ do.call("save", c(ls(envir = e), list(envir = e, file ='./data/invitrodb_v3_5_de
 
 Cmax.term.chems <- ecdf.data[min_tstar > 13 & lifestage == "maternal", dtxsid]
 
-# 15 out of 16 chems achieve Cmax at 39th week or later 
-# exceptions: 2-Chloro-N-phenylacetamide
+# 13 out of 15 chems achieved Cmax in the 37th-39th weeks 
+# exceptions: 2-Chloro-N-phenylacetamide and Quinoxyfen
 View(ecdf.data[lifestage == "maternal" & dtxsid %in% Cmax.term.chems])
 
 # 10 of these chems have Clint == 0 and all chems except 
