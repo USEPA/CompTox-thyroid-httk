@@ -109,8 +109,7 @@ add_chnm_col <- function(df) {
 crit.times <- lapply(crit.times, add_chnm_col)
 chem.cols <- c('dtxsid', 'chnm')
 
-# Wrangle data for eCDF --------------------------------------------------------
-
+# melt data for ggplot 
 melt_times <- function(name, df) {
   df.m <- df %>% 
     reshape2::melt(id.vars = c("dtxsid", "chnm"), 
@@ -125,12 +124,11 @@ melt_times <- function(name, df) {
 new.times.list <- Map(melt_times, names(tissue_list), crit.times)
 Cmax.times.m <- bind_rows(new.times.list)
 setDT(Cmax.times.m)
-
 Cmax.times.m[, lifestage := "maternal"]
 Cmax.times.m[substr(compt,1,2) == "Cf" | compt %in% c("Cconceptus", "Cplacenta"), lifestage := "fetal"]
-View(Cmax.times.m[, .SD, by = .(dtxsid, lifestage)])
 
-# add this to Table 7
+# Add Days to reach Cmax to Table 7 --------------------------------------------
+
 targets <- c('DIO1', 'DIO2', 'DIO3', 'IYD')
 plasma.tissue.bers[, target := mapply(function(x) targets[x], 
                                       apply(plasma.tissue.bers[, paste0(targets, "_BER"), with = FALSE], 1, which.min))]
@@ -142,7 +140,7 @@ table7 <- merge.data.table(plasma.tissue.bers, Cmax.times.m[, -c("lifestage")],
 
 # collapse multiple sensitive tissues and their tmaxes (time to reach Cmax in each tissue)
 table7[, most_sensitive_tissues := paste(compt, collapse = ", ") , by = .(dtxsid, target)]
-table7[, tmax := round(tmax, digits = 1)]
+table7[, tmax := signif(tmax, digits = 3)] # httk values have been reported to 3 sigfigs
 table7[, day_at_Cmax := paste(tmax, collapse = ", "), by = .(dtxsid, target)]
 
 keep_cols <- c("dtxsid", "chnm", "plasma_BER50", 
@@ -152,6 +150,7 @@ table7 <- unique(table7[, ..keep_cols])
 table7 <- table7[order(min_BER)]
 write.xlsx(table7, "./tables/preg_vs_nonpregBERs_v3.xlsx", colnames = T)
 
+# Find the Minimum Day for each Maternal/Fetal Tissue and Chem -----------------
 # get the minimum day to reach Cmax for each chem x (maternal, fetal) tissue 
 ecdf.data <- Cmax.times.m[Cmax.times.m[, .I[tmax == min(tmax)], by = .(dtxsid, lifestage)]$V1]
 setnames(ecdf.data, old = "tmax", new = "min_tstar")
@@ -330,9 +329,10 @@ View(physchem.tb[physchem.tb$dtxsid %in% Cmax.term.chems,])
 # Kepone (DTXSID1020770): Clint = 0; Fup = 0
 # 2,2',6,6'-Tetrachlorobisphenol A (DTXSID3021770):  Clint = 511.1; fup = 0
 test.chem <- c("DTXSID3021770")
+test.chem <- c("Nordihydroguaiaretic acid")
 
 # output solution every hr
-sol.out <- solve_full_pregnancy(dtxsid = test.chem,
+sol.out <- solve_full_pregnancy(chem.name = test.chem,
                                 daily.dose = 1, 
                                 doses.per.day = 1,
                                 time.course = seq(0, 40*7, 1/24),

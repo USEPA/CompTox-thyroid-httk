@@ -109,7 +109,7 @@ knitr::kable(ac50.dt[dsstox_substance_id %in% missing.dtxsids,
 
 ```{r tech-review-chems, eval = execute.chunk, include = FALSE}
 e <- new.env(parent = emptyenv())
-(load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', envir = e))
+(load('./data/invitrodb_v3_5_deiod_filtered_httk_121024.RData', envir = e))
 
 # these (98) chems were used in coauthor/tech review
 # one of these was a PFAS (DTXSID80379721) predicted by Dawson 2021 so should have been 97 
