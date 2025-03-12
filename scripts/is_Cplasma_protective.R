@@ -4,7 +4,7 @@
 # 
 # @author: Kimberly Truong
 # created: 5/30/24
-# updated: 3/9/25
+# updated: 3/12/25
 # ==============================================================================
 
 rm(list=ls())
@@ -65,7 +65,6 @@ for (i in 1:nrow(ivive.moe.tb)) {
 
 setDT(max.diff)
 
-# DATA WRANGLING ---------------------------------------------------------------
 # melt for ggplot 
 max.diff.m <- melt.data.table(max.diff, 
                                  id.vars = c("dtxsid", "chnm"), 
@@ -79,6 +78,13 @@ max.diff.m[, max_diff := log10(max_diff)]
 max.diff.m[, max.max_diff := max(max_diff), by = .(dtxsid, chnm)] 
 max.diff.m <- max.diff.m[order(max.max_diff)]
 
+# update RData file with max differences
+e <- new.env(parent = emptyenv())
+load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', envir = e)
+e$max.diff.m <- max.diff.m
+do.call("save", c(ls(envir = e), list(envir = e, file ='./data/invitrodb_v3_5_deiod_filtered_httk.RData')))
+
+# PLOTTING MAX DIFF FROM CPLASMA -----------------------------------------------
 boundary.chem <- tail(max.diff.m[max.max_diff < 0.5])[6, chnm] #pirimicarb 
 
 min.maxdiff <- max.diff.m[, min(max_diff)]
@@ -222,8 +228,3 @@ ggsave(plot = fig,
        device = "png", 
        filename = "./figures/is_Cplasma_protective-v3.png")
 
-# # update RData file with max differences 
-# e <- new.env(parent = emptyenv())
-# load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', envir = e)
-# e$max.diff <- max.diff
-# do.call("save", c(ls(envir = e), list(envir = e, file ='./data/invitrodb_v3_5_deiod_filtered_httk.RData')))
