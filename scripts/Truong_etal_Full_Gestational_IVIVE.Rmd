@@ -340,6 +340,7 @@ ylims <- c(min_val, max_val)
 # generate a set of 3 viridis colors for lifestage 
 # yellow represents neither maternal or fetal, i.e., conceptus
 my_viridis_colors <- viridis(n = 3)
+library(ggstar) # for better discernible shapes including stars 
 
 listgg <- list()
 for(k in names(tissue.aeds)) {
@@ -351,27 +352,27 @@ for(k in names(tissue.aeds)) {
   listgg[[k]] <- ggplot(data = rbind(aeds,exposures), 
                         mapping = aes(x = reorder(chnm, -min_ber), 
                                       y = value)) +
-    geom_point(aes(shape = compt, color = compt), 
-               alpha = 0.65, size = 3, stroke = 1.15, 
+    geom_star(aes(starshape = compt, fill = compt, color = compt), 
+               alpha = 0.65, size = 3,
                show.legend = T) +
     scale_y_continuous(breaks = seq(ylims[1], ylims[2], 1),
                        limits = ylims) +
-    scale_shape_manual(name = "Compartment corresponding to AED \n or Exposure", 
+    scale_starshape_manual(name = "Compartment corresponding to AED \n or Exposure", 
                        labels = c("maternal liver", "fetal liver", 
                                   "maternal thyroid", "fetal thyroid", 
                                   "conceptus", 
                                   "fetal brain", 
                                   "placenta", "exposure"),
-                       values = c('Cfbrain' = 19,
-                                  'exposure' = 18, 
-                                  'Cliver' = 17,
-                                  'Cfliver' = 17, 
-                                  'Cplacenta' = 15, 
-                                  'Cthyroid' = 8,
-                                  'Cfthyroid' = 8, 
-                                  'Cconceptus' = 6), 
+                       values = c('Cfbrain' = 15,
+                                  'exposure' = 28, 
+                                  'Cliver' = 11,
+                                  'Cfliver' = 11, 
+                                  'Cplacenta' = 13, 
+                                  'Cthyroid' = 1,
+                                  'Cfthyroid' = 1, 
+                                  'Cconceptus' = 23), 
                        drop = F) + # this makes sure all levels of a factor are displayed even if unused 
-    scale_color_manual(name = "Compartment corresponding to AED \n or Exposure", 
+    scale_fill_manual(name = "Compartment corresponding to AED \n or Exposure", 
                        labels = c("maternal liver", "fetal liver", 
                                   "maternal thyroid", "fetal thyroid", 
                                   "conceptus", 
@@ -381,10 +382,25 @@ for(k in names(tissue.aeds)) {
                                   'exposure' = 'dimgrey', 
                                   'Cliver' = my_viridis_colors[1],
                                   'Cfliver' = my_viridis_colors[2], 
-                                  'Cplacenta' = 'pink', 
+                                  'Cplacenta' = '#990066', 
                                   'Cthyroid' = my_viridis_colors[1],
                                   'Cfthyroid' = my_viridis_colors[2], 
-                                  'Cconceptus' = my_viridis_colors[3]), 
+                                  'Cconceptus' = '#73D055FF'), 
+                       drop = F) +
+     scale_color_manual(name = "Compartment corresponding to AED \n or Exposure",
+                       labels = c("maternal liver", "fetal liver",
+                                  "maternal thyroid", "fetal thyroid",
+                                  "conceptus",
+                                  "fetal brain",
+                                  "placenta", "exposure"),
+                       values = c('Cfbrain' = my_viridis_colors[2],
+                                  'exposure' = 'dimgrey',
+                                  'Cliver' = my_viridis_colors[1],
+                                  'Cfliver' = my_viridis_colors[2],
+                                  'Cplacenta' = '#990066',
+                                  'Cthyroid' = my_viridis_colors[1],
+                                  'Cfthyroid' = my_viridis_colors[2],
+                                  'Cconceptus' = '#73D055FF'),
                        drop = F) +
     labs(x = 'Chemical', y = 'Oral AED or Exposure (log10 mg/kg-bw/day)', title = k) +
     theme_bw() +
@@ -420,8 +436,9 @@ prow <- plot_grid(pcol1, pcol2,
 grobs <- ggplotGrob(
   listgg$DIO2 + 
   guides(
-    shape = guide_legend(ncol = 2, byrow = F), 
-    color = guide_legend(ncol = 2, byrow = F)
+    starshape = guide_legend(ncol = 2, byrow = F), 
+    fill = guide_legend(ncol = 2, byrow = F), 
+    color = guide_legend(ncol = 2, byrow = F),
   ) +
   theme(legend.position = "bottom")
   )$grobs
@@ -436,14 +453,14 @@ ggsave(plot = fig9,
        dpi = 300,
        width = 21.33, height = 13,
        device = "tiff",
-       filename = "./figures/300dpi/preg_prioritization_by_BER-v3.tiff")
+       filename = "./figures/300dpi/preg_prioritization_by_BER-v4.tiff")
 
 ggsave(plot = fig9,
        units = "in",
        dpi = 300,
        width = 21.33, height = 13,
        device = "png",
-       filename = "./figures/preg_prioritization_by_BER-v3.png")
+       filename = "./figures/preg_prioritization_by_BER-v4.png")
 
 ```
 
