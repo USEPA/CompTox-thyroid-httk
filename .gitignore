@@ -2,3 +2,5 @@
 .Rproj.user
 .RData
 CompTox-thyroid-httk.Rproj
+data/old/*
+figures/old/*
