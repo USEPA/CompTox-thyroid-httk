@@ -137,7 +137,7 @@ for (i in 1:nrow(human.httk.dt)) {
                      which.quantile = c(0.5, 0.95), 
                      model = '3compartmentss', 
                      output.units = 'uM', 
-                     parameterize.arg.list=list(physchem.exclude=FALSE), 
+                     parameterize.args.list=list(physchem.exclude=FALSE), 
                      suppress.messages = TRUE) # This does not work- report bug
   
   human.httk.dt$mc.css50[i] <- out["50%"]
@@ -151,7 +151,7 @@ for (i in 1:nrow(human.httk.dt)) {
                                       output.units = 'mgpkgpday',
                                       model = '3compartmentss',
                                       restrictive.clearance = TRUE,
-                                      parameterize.arg.list=list(physchem.exclude=FALSE),
+                                      parameterize.args.list=list(physchem.exclude=FALSE),
                                       suppress.messages = TRUE)
   
    human.httk.dt$oral_equiv50[i] <- oralequiv.out["50%"]
@@ -198,8 +198,10 @@ setnames(ivive.moe.tb, "dsstox_substance_id", "dtxsid")
 ### Compute half-lives
 ```{r half-lives, warning = FALSE, eval = execute.chunk}
 for (i in 1:nrow(ivive.moe.tb)) {
-  ivive.moe.tb$half.life[i] <- calc_half_life(dtxsid = ivive.moe.tb$dtxsid[i], physchem.exclude = FALSE) # in hrs
-  ivive.moe.tb$half.life.days <- ivive.moe.tb$half.life/24 # in days
+  ivive.moe.tb$half.life[i] <- calc_half_life(dtxsid = ivive.moe.tb$dtxsid[i], # t1/2 in hours 
+                                              physchem.exclude = FALSE, 
+                                              Caco2.options = list(keepit100 = TRUE)) # assume 100% bioavailability 
+  ivive.moe.tb$half.life.days[i] <- ivive.moe.tb$half.life[i]/24 # in days
 }
 
 ```
