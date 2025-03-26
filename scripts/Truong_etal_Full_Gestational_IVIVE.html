@@ -704,10 +704,9 @@ AED = \frac{AC_{50}}{CSS_{50}}
 <h3>Compute half-lives</h3>
 <div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a><span class="cf">for</span> (i <span class="cf">in</span> <span class="dv">1</span><span class="sc">:</span><span class="fu">nrow</span>(ivive.moe.tb)) {</span>
 <span id="cb17-2"><a href="#cb17-2" tabindex="-1"></a>  ivive.moe.tb<span class="sc">$</span>half.life[i] <span class="ot">&lt;-</span> <span class="fu">calc_half_life</span>(<span class="at">dtxsid =</span> ivive.moe.tb<span class="sc">$</span>dtxsid[i], <span class="co"># t1/2 in hours </span></span>
-<span id="cb17-3"><a href="#cb17-3" tabindex="-1"></a>                                              <span class="at">physchem.exclude =</span> <span class="cn">FALSE</span>, </span>
-<span id="cb17-4"><a href="#cb17-4" tabindex="-1"></a>                                              <span class="at">Caco2.options =</span> <span class="fu">list</span>(<span class="at">keepit100 =</span> <span class="cn">TRUE</span>)) <span class="co"># assume 100% bioavailability </span></span>
-<span id="cb17-5"><a href="#cb17-5" tabindex="-1"></a>  ivive.moe.tb<span class="sc">$</span>half.life.days[i] <span class="ot">&lt;-</span> ivive.moe.tb<span class="sc">$</span>half.life[i]<span class="sc">/</span><span class="dv">24</span> <span class="co"># in days</span></span>
-<span id="cb17-6"><a href="#cb17-6" tabindex="-1"></a>}</span></code></pre></div>
+<span id="cb17-3"><a href="#cb17-3" tabindex="-1"></a>                                              <span class="at">physchem.exclude =</span> <span class="cn">FALSE</span>) </span>
+<span id="cb17-4"><a href="#cb17-4" tabindex="-1"></a>  ivive.moe.tb<span class="sc">$</span>half.life.days[i] <span class="ot">&lt;-</span> ivive.moe.tb<span class="sc">$</span>half.life[i]<span class="sc">/</span><span class="dv">24</span> <span class="co"># in days</span></span>
+<span id="cb17-5"><a href="#cb17-5" tabindex="-1"></a>}</span></code></pre></div>
 </div>
 <div id="update-rdata-with-latest-ivive-data-with-half-life-info" class="section level3">
 <h3>Update RData with latest IVIVE data with half-life info</h3>
