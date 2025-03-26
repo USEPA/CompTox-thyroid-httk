@@ -1,7 +1,7 @@
 ---
 title: "Truong et al. (2025): Using Thyroid-Related Bioactivity Data for Full Human
   Gestational IVIVE"
-author: "Kimberly Truong"
+author: "Kimberly T.Truong, John F. Wambaugh, Dustin F. Kapraun, Sarah E. Davidson-Fritz, Stephanie Eytcheson, Richard Judson, Katie Paul-Friedman"
 date:  "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: > 
