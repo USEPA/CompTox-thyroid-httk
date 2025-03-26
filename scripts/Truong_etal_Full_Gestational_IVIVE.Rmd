@@ -201,8 +201,7 @@ setnames(ivive.moe.tb, "dsstox_substance_id", "dtxsid")
 ```{r half-lives, warning = FALSE, eval = execute.vignette}
 for (i in 1:nrow(ivive.moe.tb)) {
   ivive.moe.tb$half.life[i] <- calc_half_life(dtxsid = ivive.moe.tb$dtxsid[i], # t1/2 in hours 
-                                              physchem.exclude = FALSE, 
-                                              Caco2.options = list(keepit100 = TRUE)) # assume 100% bioavailability 
+                                              physchem.exclude = FALSE) 
   ivive.moe.tb$half.life.days[i] <- ivive.moe.tb$half.life[i]/24 # in days
 }
 
