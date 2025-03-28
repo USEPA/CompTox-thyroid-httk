@@ -16,7 +16,7 @@ In this vignette, we show how to use the full human gestational model from **htt
 
 Truong et al. 2025 describes a prioritization workflow for thyroid-related bioactivity data related to deiodinase inhibition and applies the full human gestational model to compute administered equivalent doses (AEDs) and bioactivity-to-exposure ratios (BERs) by integrating SEEM3 ExpoCast predictions. The figure below shows an overview of the workflow. 
 
-![Figure 1 from *Truong et al.*](../figures/fig1-workflow-v3.png){width=100%}
+![Figure 1 from *Truong et al. 2025*](../figures/fig1-workflow-v3.png){width=100%}
 
 This vignette covers the last step of the workflow "Targeted bioactivity:exposure ratios", and the previous three steps are done by executing `deiod_invitrodb_v3_5_processing.R`.
 
@@ -42,7 +42,7 @@ load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', verbose = TRUE)
 ```
 ### eval = execute.vignette
 Several chunks of code in this vignette have "eval = execute.vignette" and we set execute.chunk to be FALSE, by default. We do this to include all the code that was necessary to produce the figures but was not run when the vignette was built since some of these chunks take a considerable amount of time and the checks on CRAN limit how long we can spend
-building the package. You can still reproduce the end figures knitting the .Rmd file, since all the necessary and intermediate data objects are stored in `./data/invitrodb_v3_5_deiod_filtered_httk.RData`. If you want to rerun the whole workflow on your own, you must rerun all code from top to bottom, either by changing execute.vignette to TRUE or click on the "green arrow" in RStudio. 
+building the package. You can still reproduce the end figures knitting the .Rmd file, since all the necessary and intermediate data objects are stored in `./data/invitrodb_v3_5_deiod_filtered_httk.RData`. If you want to rerun the whole workflow on your own, you must rerun all code from top to bottom, either by changing execute.vignette to TRUE or clicking on the "green arrow" in RStudio. 
 
 ```{r}
 execute.vignette <- FALSE 
@@ -207,18 +207,6 @@ for (i in 1:nrow(ivive.moe.tb)) {
 
 ```
 
-### Update RData with latest IVIVE data with half-life info
-```{r add-ivive-tb, eval = execute.vignette}
-# update RData file with BER_plasma data 
-# this helps save some time in knitting this vignette 
-e <- new.env(parent = emptyenv())
-(load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', envir = e))
-e$ivive.moe.tb <- ivive.moe.tb
-do.call("save", c(ls(envir = e),
-                  list(envir = e, file ='./data/invitrodb_v3_5_deiod_filtered_httk.RData')))
-
-```
-
 ## Simulate full-term human pregnancy model 
 ```{r fullpreg-sim, message = FALSE, warning = FALSE, eval = execute.vignette}
 
@@ -273,15 +261,6 @@ for (i in names(tissue_list)) {
   df.target$dtxsid <- ivive.moe.tb$dtxsid[active.chem.ind]
   tissue.aeds[[i]] <- df.target
 }
-
-```
-
-### Update RData file with tissue-based AEDs
-```{r preg-aeds-RData, eval = execute.vignette}
-e <- new.env(parent = emptyenv())
-load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', envir = e)
-e$tissue.aeds <- tissue.aeds
-do.call("save", c(ls(envir = e), list(envir = e, file ='./data/invitrodb_v3_5_deiod_filtered_httk.RData')))
 
 ```
 
@@ -466,17 +445,6 @@ fig9 <- plot_grid(prow, legend2,
 
 ```
 
-### update RData File with maternal-fetal BERs
-```{r mat-fet-bers-Rdata, eval = execute.vignette}
-# update RData file with melted data for ggplot
-# i.e. chemicals ranked by the most sensitive tissue and lifestage-specific BERs with exposure estimates from ExpoCast
-e <- new.env(parent = emptyenv())
-load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', envir = e)
-e$tissue.bers <- tissue.bers
-do.call("save", c(ls(envir = e), list(envir = e, file ='./data/invitrodb_v3_5_deiod_filtered_httk.RData')))
-
-```
-
 # Comparing IVIVE models based on BER prioritization 
 
 ## Table 7 
@@ -529,17 +497,7 @@ setnames(plasma.tissue.bers, old = colnames(plasma.tissue.bers)[3:8],
          new = c('plasma_BER50', 'DIO1_BER', 'DIO2_BER', 'DIO3_BER', 'IYD_BER', 'min_BER'))
 
 plasma.tissue.bers <- plasma.tissue.bers[order(min_BER)]
-# write.xlsx(plasma.tissue.bers, "./tables/preg_vs_nonpregBERs_v3.xlsx", colnames = T)
-
-```
-
-### update RData File with Table 7
-```{r 3compss-vs-preg-bers-Rdata, eval = execute.vignette}
-# update RData with Table 7 (preg vs non-preg BERs)
-e <- new.env(parent = emptyenv())
-load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', envir = e)
-e$plasma.tissue.bers <- plasma.tissue.bers
-do.call("save", c(ls(envir = e), list(envir = e, file ='./data/invitrodb_v3_5_deiod_filtered_httk.RData')))
+# write.xlsx(plasma.tissue.bers, "./tables/Table7_preg_vs_nonpregBERs_v3.xlsx", colnames = T)
 
 ```
 
@@ -639,4 +597,23 @@ bers2 <- plot_grid(preg.vs.nonpreg.pp, seem3pp,
 
 ```
 
+# httk-generated data 
+```{r create-httk-RData, eval = execute.vignette}
+e <- new.env(parent = emptyenv())
+(load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', envir = e))
 
+e$ivive.moe.tb <- ivive.moe.tb # IVIVE table for 3compss with BER_plasmas and half-lives
+e$tissue.aeds <- tissue.aeds # AEDs for each target by C(f)tissue
+e$tissue.bers <- tissue.bers # all AEDs for each target with SEEM3 estimates for every chem (long)
+e$plasma.tissue.bers <- plasma.tissue.bers # preg vs non-preg BERs (majority of Table 7)
+
+do.call("save", c(ls(envir = e),
+                  list(envir = e, file ='./data/invitrodb_v3_5_deiod_filtered_httk.RData')))
+
+```
+
+# sessionInfo()
+```{r, echo = FALSE}
+sessionInfo()
+
+```

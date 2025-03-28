@@ -148,7 +148,7 @@ keep_cols <- c("dtxsid", "chnm", "plasma_BER50",
                "most_sensitive_tissues", "day_at_Cmax")
 table7 <- unique(table7[, ..keep_cols])
 table7 <- table7[order(min_BER)]
-write.xlsx(table7, "./tables/preg_vs_nonpregBERs_v3.xlsx", colnames = T)
+write.xlsx(table7, "./tables/Table7_preg_vs_nonpregBERs_v3.xlsx", colnames = T)
 
 # Find the Minimum Day for each Maternal/Fetal Tissue and Chem -----------------
 # get the minimum day to reach Cmax for each chem x (maternal, fetal) tissue 
