@@ -130,7 +130,7 @@ for (i in 1:nrow(toxcast.pods.httk)) {
                      which.quantile = c(0.5, 0.95), 
                      model = '3compartmentss', 
                      output.units = 'uM', 
-                     parameterize.arg.list=list(physchem.exclude=FALSE))
+                     parameterize.args.list=list(physchem.exclude=FALSE))
   
   toxcast.pods.httk$mc.css50[i] <- out["50%"]
   toxcast.pods.httk$mc.css95[i] <- out["95%"]

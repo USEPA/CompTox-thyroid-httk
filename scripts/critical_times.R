@@ -8,7 +8,7 @@
 # 
 # @author: Kimberly Truong
 # created: 2/1/2023
-# updated: 3/7/2025
+# updated: 4/1/2025
 # ==============================================================================
 
 rm(list=ls())
@@ -29,6 +29,8 @@ load_sipes2017() # most data for pharma compounds
 load_pradeep2020() # best ML method for in silico prediction
 
 # Main Script starts here ------------------------------------------------------
+# Ignore running this section unless you want to reproduce the entire workflow from scratch.
+# Results are stored in "./data/invitrodb_v3_5_deiod_filtered_httk.RData."
 
 # tissues where DIO enzymes live 
 impacted_tissues <- c('Cliver', 'Cthyroid', 'Cfliver', 'Cfbrain', 'Cfthyroid', 
@@ -128,6 +130,8 @@ Cmax.times.m[, lifestage := "maternal"]
 Cmax.times.m[substr(compt,1,2) == "Cf" | compt %in% c("Cconceptus", "Cplacenta"), lifestage := "fetal"]
 
 # Add Days to reach Cmax to Table 7 --------------------------------------------
+# Ignore running this section unless you want to reproduce the entire workflow from scratch.
+# Results are stored in "./data/invitrodb_v3_5_deiod_filtered_httk.RData."
 
 targets <- c('DIO1', 'DIO2', 'DIO3', 'IYD')
 plasma.tissue.bers[, target := mapply(function(x) targets[x], 
@@ -151,6 +155,9 @@ table7 <- table7[order(min_BER)]
 write.xlsx(table7, "./tables/Table7_preg_vs_nonpregBERs_v3.xlsx", colnames = T)
 
 # Find the Minimum Day for each Maternal/Fetal Tissue and Chem -----------------
+# Ignore running this section unless you want to reproduce the entire workflow from scratch.
+# Results are stored in "./data/invitrodb_v3_5_deiod_filtered_httk.RData."
+
 # get the minimum day to reach Cmax for each chem x (maternal, fetal) tissue 
 ecdf.data <- Cmax.times.m[Cmax.times.m[, .I[tmax == min(tmax)], by = .(dtxsid, lifestage)]$V1]
 setnames(ecdf.data, old = "tmax", new = "min_tstar")

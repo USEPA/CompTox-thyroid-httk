@@ -4,7 +4,7 @@
 # 
 # @author: Kimberly Truong
 # created: 5/30/24
-# updated: 3/12/25
+# updated: 4/1/25
 # ==============================================================================
 
 rm(list=ls())
@@ -23,6 +23,8 @@ load_sipes2017() # most data for pharma compounds
 load_pradeep2020() # best ML method for in silico prediction
 
 # Main Script starts here ------------------------------------------------------
+# Ignore running this section unless you want to reproduce the entire workflow from scratch.
+# Results are stored in "./data/invitrodb_v3_5_deiod_filtered_httk.RData."
 
 # tissues where DIO enzymes live 
 tissues <- c('Cfliver', 'Cfbrain', 'Cfthyroid', 'Cconceptus', 'Cplasma', 'Cfplasma')
