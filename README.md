@@ -38,7 +38,7 @@ For Figures 7-8, one can just run the plotting sections noted in the correspondi
 If you're interested in replicating the prioritization pipeline from top to bottom, the steps are as follows:
 1. Run/knit `src/invitrodb_v3_5_data.Rmd` for ToxCast data retrieval from invitrodb v3.5.
 2. Run `scripts/deiod_invitrodb_v3_5_processing.R` which carries out the ToxCast data filtering (see "Assessment for Selectivity + Assay Interference" and "Refinement" steps of the workflow). 
-3. Change variable `execute.vignette` to TRUE in `Truong_etal_Full_Gestational_IVIVE.Rmd` and knit or by running all the chunks in RStudio ("Targeted bioactivity:exposure ratios"). 
+3. Change variable `execute.vignette` to TRUE in `Truong_etal_Full_Gestational_IVIVE.Rmd` and knit or by running all the chunks in RStudio ("Targeted bioactivity:exposure ratios" of workflow). 
 
 After running these scripts, you can proceed to make the figures in the following order: 6,7,8,11. 
 
