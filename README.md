@@ -4,7 +4,7 @@
 This repository contains all the necessary code and data files to reproduce figures and tables in the manuscript as well as replicate the prioritization workflow, as described in Figure 1 shown here:
 ![figure text](figures/fig1-workflow-v3.png)
 
-The code in this repository can be used to run the prioritization pipeline from left to right on your own (see [Usage for running the prioritization workflow from ToxCast data](#usage-for-running-prioritization-workflow-from-ToxCast-data)). However, it's also possible to simply generate the figures in the manuscript without having to generate the underlying data from scratch (see [Usage for generating figures using preprocessed data from workflow](#usage-for-generating-figures-using-preprocessed-data-from-workflow)). 
+The code in this repository can be used to run the prioritization pipeline from left to right on your own (see [Usage for running the prioritization workflow from ToxCast data](#usage-for-running-the-prioritization-workflow-from-toxcast-data)). However, it's also possible to simply generate the figures in the manuscript without having to generate the underlying data from scratch (see [Usage for generating figures using preprocessed data from workflow](#usage-for-generating-figures-using-preprocessed-data-from-workflow)). 
 
 ### Data Overview 
 Scripts in the `scripts` directory reference source files in the `data/` folder. Because this work relies on many data sources, we highlight the major ones here:
@@ -13,7 +13,7 @@ Scripts in the `scripts` directory reference source files in the `data/` folder.
 3. High-throughput exposure predictions representing the median of total US population aggregate exposures from all exposure pathways considered, available for almost 700k substances from the ExpoCast SEEM3 model (`data/chem.preds-2018-11-28.RData`)
 4. _In vivo_ toxicity information from repeat-dose studies for over 7000 substances summarized from the US EPA's ToxValDB (`data/toxval pods chemical level oral mgkgday.xlsx`). 
 
-### Usage for generating figures using preprocessed data from workflow (#usage-for-generating-figures-using-preprocessed-data-from-workflow)
+### Usage for generating figures using preprocessed data from workflow
 If you'd rather not spend the time needed to process the data and run the HTTK models, I've included most of the numeric outputs in the `data/invitrodb_v3_5_deiod_filtered_httk.RData` object. Enrichment analyses could be run from top to bottom with _in vitro_ data from ToxCast as input without taking too much time. 
 
 Details with regards to reproducing figures are as follows:
@@ -34,7 +34,7 @@ Figures 6-11 are mostly mapped to individual R files in the `scripts` directory 
 
 Executing or knitting these files should be sufficient for generating the corresponding figures. Figures 1-3 were made in Powerpoint. 
 
-### Usage for running the prioritization workflow from ToxCast data (#usage-for-running-prioritization-workflow-from-ToxCast-data)
+### Usage for running the prioritization workflow from ToxCast data
 If you're interested in replicating the prioritization pipeline starting from _in vitro_ ToxCast data from invitrodb v3.5, the steps are as follows:
 1. Run/knit `src/invitrodb_v3_5_data.Rmd`.
 2. Run `scripts/deiod_invitrodb_v3_5_processing.R`.
