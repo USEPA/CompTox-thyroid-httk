@@ -35,10 +35,10 @@ Figures 6-11 are mostly mapped to individual R files in the `scripts` directory 
 For Figures 7-8, one can just run the plotting sections noted in the corresponding scripts by doing `Ctrl + Alt + T`. Figures 1-3 were made in Powerpoint. 
 
 ### Usage for running the prioritization workflow from ToxCast data
-If you're interested in replicating the prioritization pipeline from top to bottom starting with ToxCast data retrieval (from invitrodb), the steps are as follows:
-1. Run/knit `src/invitrodb_v3_5_data.Rmd`.
-2. Run `scripts/deiod_invitrodb_v3_5_processing.R`.
-3. Change variable `execute.vignette` to TRUE in `Truong_etal_Full_Gestational_IVIVE.Rmd` and knit or by running all the chunks in the RStudio. 
+If you're interested in replicating the prioritization pipeline from top to bottom, the steps are as follows:
+1. Run/knit `src/invitrodb_v3_5_data.Rmd` for ToxCast data retrieval from invitrodb v3.5.
+2. Run `scripts/deiod_invitrodb_v3_5_processing.R` which carries out the ToxCast data filtering (see "Assessment for Selectivity + Assay Interference" and "Refinement" steps of the workflow). 
+3. Change variable `execute.vignette` to TRUE in `Truong_etal_Full_Gestational_IVIVE.Rmd` and knit or by running all the chunks in RStudio ("Targeted bioactivity:exposure ratios" of workflow). 
 
 After running these scripts, you can proceed to make the figures in the following order: 6,7,8,11. 
 
