@@ -135,7 +135,7 @@ Cdiff <- ggplot(max.diff.m,
   labs(x = 'Chemical', y = "log10(x) - log10 Cplasma") +
   coord_flip()
 
-# Exploring TK properties ------------------------------------------------------
+# PLOTTING: Exploring TK properties --------------------------------------------
 
 # let's see if higher concs are driven by TK properties
 # pare down data to the max difference by chemical 

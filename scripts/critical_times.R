@@ -205,11 +205,9 @@ ecdf.data[lifestage == "maternal" & min_tstar < 13, length(unique(dtxsid))]
 # but 13 of these chems reached Cmax in 37th-39th weeks
 View(ecdf.data[min_tstar > 13 & lifestage == "maternal"])
 
-# Toxicokinetic Properties for Chems achieving Cmax in 1st vs 2nd Trimester-----
-
-# let's see if chems are distinct toxicokinetically (1st vs 2nd trimester)
-set1 <- ecdf.data[lifestage == "maternal" & min_tstar <= 13, dtxsid]
-set2 <- ecdf.data[lifestage == "maternal" & min_tstar > 13, dtxsid]
+# Obtaining TK parameters ------------------------------------------------------
+# Ignore running this section unless you want to reproduce the entire workflow from scratch.
+# physchem.tb is stored in "./data/invitrodb_v3_5_deiod_filtered_httk.RData."
 
 parameters <- c("Clint", "Funbound.plasma", "Fraction_unbound_plasma_fetus", "Pow")
 
@@ -233,6 +231,12 @@ physchem.tb <- data.frame(physchem.tb)
 physchem.tb$dtxsid <- ivive.moe.tb$dtxsid
 physchem.tb$chnm <- ivive.moe.tb$chnm
 physchem.tb <- physchem.tb[, c("dtxsid", "chnm", parameters)]
+
+# PLOTTING: TK Properties for Chems achieving Cmax in 1st vs 2nd Trimester------
+
+# let's see if chems are distinct toxicokinetically (1st vs 2nd trimester)
+set1 <- ecdf.data[lifestage == "maternal" & min_tstar <= 13, dtxsid]
+set2 <- ecdf.data[lifestage == "maternal" & min_tstar > 13, dtxsid]
 
 # melt data for violin plots
 ecdf.tk <- reshape2::melt(physchem.tb[, c("dtxsid", parameters[parameters != "Fraction_unbound_plasma_fetus"])], 
@@ -310,14 +314,15 @@ ggsave(plot = fig,
        device = "png", 
        filename = "./figures/ecdf-v3.png")
 
-# update RData file with min times to reach Cmax in fetal vs. maternal tissues
-# as well as physicochemical property values
+# Update RData------------------------------------------------------------------ 
+# Ignore running this section unless you want to reproduce the entire workflow from scratch.
+# Results are stored in "./data/invitrodb_v3_5_deiod_filtered_httk.RData."
 e <- new.env(parent = emptyenv())
 load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', envir = e)
 e$table7 <- table7
 e$Cmax.times.m <- Cmax.times.m
 e$ecdf.data <- ecdf.data
-e$physchem.tb <- physchem.tb
+e$physchem.tb <- physchem.tb # save this because we're going to need this for is_Cplasma_protective.R
 do.call("save", c(ls(envir = e), list(envir = e, file ='./data/invitrodb_v3_5_deiod_filtered_httk.RData')))
 
 # Investigating Chems that reach Cmax in the Mother End of Term ----------------
