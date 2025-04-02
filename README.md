@@ -43,4 +43,14 @@ If you're interested in replicating the prioritization pipeline from top to bott
 After running the workflow, you can proceed to make the figures as described above. It is recommended to run the script for Figure 7 before that for Figure 8, since some redundancy has been factored out. 
 
 ## Dependencies
-R library httk v2.6.0 and its relevant dependencies are required. See: https://github.com/USEPA/CompTox-ExpoCast-httk and https://cran.r-project.org/web/packages/httk/index.html
+All code was written and tested using R 4.4.1, and should run using later versions.
+
+| Use Case | Package(s)
+|---------|---------|
+| General Data <br> Manipulation | data.table 1.16.2 <br> dplyr 1.1.4 <br> tidyr 1.3.1 <br> reshape2 1.4.4 |
+Plotting and <br> Visualization | ggplot2 3.5.1 <br> ggrepel 0.9.5 <br> ggvenn 0.1.10 <br> ggstar 1.0.4 <br> cowplot 1.1.3 <br> ggpubr 0.6.0 <br> RColorBrewer 1.1-3 <br> viridis 0.6.5 <br> viridisLite 0.4.2 <br> pheatmap 1.0.12 <br> dendextend 1.18.0 <br> latex2exp 0.9.6 <br> |
+Data Download <br> and Writing | openxlsx 4.2.6.1 <br> readxl 1.4.3 <br> tcpl 3.2.0 (dev)
+
+### Additional Code Dependencies
+- High-throughput toxicokinetics (*httk*) R package v2.6.0 and its relevant dependencies are required.
+    - See: https://github.com/USEPA/CompTox-ExpoCast-httk and https://cran.r-project.org/web/packages/httk/index.html
