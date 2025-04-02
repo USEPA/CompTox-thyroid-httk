@@ -14,15 +14,15 @@ Scripts in the `scripts` directory reference source files in the `data/` folder.
 4. _In vivo_ toxicity information from repeat-dose studies for over 7000 substances summarized from the US EPA's ToxValDB v9.4 (`data/toxval pods chemical level oral mgkgday.xlsx`). 
 
 ### Usage for generating figures using preprocessed data from workflow
-If you'd rather not spend the time needed to process the data and run the HTTK models, I've included most of the numeric outputs in the `data/invitrodb_v3_5_deiod_filtered_httk.RData` object. Complete enrichment analysis could be reproduced with _in vitro_ data from ToxCast as input without taking too much time (~2 minutes) by knitting `Supp3_Enrichment_Analysis.Rmd` within the `supplement/` subfolder of `scripts/`. Otherwise, all other scripts for generating the main figures in the manuscript are found in the `scripts/` directory. 
+If you'd rather not spend the time needed to process the data and run the HTTK models, I've included most of the numeric outputs in the `data/invitrodb_v3_5_deiod_filtered_httk.RData` object. Complete enrichment analysis could be reproduced with the _in vitro_ data from ToxCast as input without taking too much time (~2 minutes) by knitting `Supp3_Enrichment_Analysis.Rmd` within the `supplement/` subfolder of `scripts/`. Otherwise, all other scripts for generating the main figures in the manuscript are found in the `scripts/` directory. 
 
 Details with regards to reproducing individual figures are as follows:
 
 **Figures 4 and 5**: knit `scripts/supplement/Supp3_Enrichment_Analysis.Rmd` (R chunks responsible for generating Figures 4 and 5 are noted). 
 
-Figures 6-11 are mostly mapped to individual R files in the `scripts` directory as follows:
+Figures 6-11 mostly map to individual R files in the `scripts` directory as follows:
 
-**Figure 6**: `model_stitching.R` (self-contained)
+**Figure 6**: `model_stitching.R` 
 
 **Figure 7**: `critical_times.R` 
 
@@ -30,17 +30,17 @@ Figures 6-11 are mostly mapped to individual R files in the `scripts` directory 
 
 **Figures 9-10**: Knit `Truong_etal_Full_Gestational_IVIVE.Rmd` with `execute.vignette = FALSE`
 
-**Figures 11**: `devtox_pods.R` (self-contained)
+**Figures 11**: `devtox_pods.R`
 
 For Figures 7-8, one can just run the plotting sections noted in the corresponding scripts by doing `Ctrl + Alt + T`. Figures 1-3 were made in Powerpoint. 
 
 ### Usage for running the prioritization workflow from ToxCast data
 If you're interested in replicating the prioritization pipeline from top to bottom, the steps are as follows:
-1. Run/knit `src/invitrodb_v3_5_data.Rmd` for ToxCast data retrieval from invitrodb v3.5.
+1. Run all chunks in `data/invitrodb_v3_5_data.Rmd` for ToxCast data retrieval from invitrodb v3.5.
 2. Run `scripts/deiod_invitrodb_v3_5_processing.R` which carries out the ToxCast data filtering (see "Assessment for Selectivity + Assay Interference" and "Refinement" steps of the workflow). 
-3. Change variable `execute.vignette` to TRUE in `Truong_etal_Full_Gestational_IVIVE.Rmd` and knit or by running all the chunks in RStudio ("Targeted bioactivity:exposure ratios" of workflow). 
+3. Change variable `execute.vignette` to TRUE in `Truong_etal_Full_Gestational_IVIVE.Rmd` and knit or run all the chunks in RStudio ("Targeted bioactivity:exposure ratios" of workflow).
 
-After running these scripts, you can proceed to make the figures in the following order: 6,7,8,11. 
+After running the workflow, you can proceed to make the figures as described above. It is recommended to run the script for Figure 7 before that for Figure 8, since some redundancy has been factored out. 
 
 ### Dependencies
 R library httk v2.6.0 and its relevant dependencies are required. See: https://github.com/USEPA/CompTox-ExpoCast-httk and https://cran.r-project.org/web/packages/httk/index.html
