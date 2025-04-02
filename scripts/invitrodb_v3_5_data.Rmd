@@ -1,0 +1,166 @@
+---
+title: "Invitrodb_v3_5_retrieval"
+author: "Katie Paul-Friedman and Kimberly Truong"
+date: "4/2/2025"
+output:
+  html_document:
+    code_folding: hide
+    collapsed: yes
+    df_print: paged
+    lightbox: no
+    number_sections: yes
+    self_contained: yes
+    thumbnails: no
+    toc: yes
+    toc_float: yes
+  pdf_document:
+    toc: yes
+---
+```{r setup, warning=FALSE, message=FALSE, echo=FALSE}
+library(data.table)
+library(tcpl)
+library(dplyr)
+
+knitr::opts_knit$set(root.dir = 'C:/Users/ktruong/OneDrive - Environmental Protection Agency (EPA)/Profile/Documents/CompTox-thyroid-httk')
+
+```
+
+* For invitrodb v3.5, there will be more thyroid data in there but largely for PFAS (from GLTED) compared to v3.4.
+
+```{r, warning=FALSE, echo=FALSE}
+## connect to invitrodb with tcpl
+tcplConf(user='_dataminer', pass='pass', 
+         db='prod_internal_invitrodb_v3_5', 
+         drvr='MySQL', 
+         host='ccte-mysql-res.dmap-prod.aws.epa.gov') 
+tcplConfList()
+
+```
+
+# Load Assay annotation data {.tabset .tabset-fade .tabset-pills}
+
+* gene level annotations help us locate the data of interest.
+
+## Load assay information at an endpoint level
+
+```{r, warning=FALSE, echo=FALSE}
+
+# load assay component endpoint (ace) data
+ace <- tcplQuery('SELECT * FROM assay_component_endpoint;') %>% data.table()
+gene <- tcplQuery('SELECT * FROM intended_target INNER JOIN gene ON intended_target.target_id=gene.gene_id;') %>% data.table()
+ace <- merge.data.table(ace,
+        gene[,c('aeid', 'official_symbol','gene_name')],
+                        by='aeid',
+                        all.x=TRUE)
+
+# load cytotoxicity information
+cytotox <- tcplQuery("SELECT * FROM cytotox INNER JOIN chemical ON cytotox.chid=chemical.chid;") %>% data.table()
+
+```
+
+## Thyroid relevant assays
+* based on manual review of assay endpoint IDs in the assay component endpoint table
+
+```{r, warning=FALSE}
+
+ace[,thyroid_related_target := as.character(NA)]
+
+# thyroid hormone synthesis and conversion targets
+ace[aeid %in% c(1508, 1509, 1824, 1848, 3090), thyroid_related_target := 'TPO']
+ace[aeid %in% c(2037, 2110), thyroid_related_target := 'NIS']
+ace[aeid %in% c(2309, 2532, 2533, 3032, 3091, 3092), thyroid_related_target := 'Deiodinases']
+
+# Thyroid hormone related receptors in hypothalamus, pituitary, and thyroid (regulation)
+ace[aeid %in% c(683, 2364, 2365), thyroid_related_target := 'TRHR']
+ace[aeid %in% c(2040, 2043, 2046), thyroid_related_target := 'TSHR']
+ace[aeid %in% c(143, 724, 803, 804, 805, 1094, 1095, 1369, 1498, 
+                1499, 2226, 2227, 2230, 2236, 2237, 2240, 2241,
+                2244, 2247, 2253, 2254, 2689), thyroid_related_target := 'THR']
+
+# thyroid hormone serum binding proteins
+ace[aeid %in% c(3088,3089), thyroid_related_target := 'Binding']
+
+# liver related MIEs
+ace[aeid %in% c(63, 806, 807, 1400), thyroid_related_target := 'AhR']
+ace[official_symbol %in% c('Cyp1a1','Cyp1a2','CYP1A1','CYP1A2'), thyroid_related_target := 'AhR']
+
+ace[aeid %in% c(101,
+116,
+712,
+713,
+2047,
+2048,
+2049,
+2050), thyroid_related_target := 'CAR']
+ace[official_symbol %in% c('CYP2B6'), thyroid_related_target := 'CAR']
+
+ace[aeid %in% c(103,
+135,
+721,
+2363,
+2362), thyroid_related_target:= 'PXR']
+ace[official_symbol %in% c('CYP3A4','CYP3A5','CYP3A7','Cyp3a2','Cyp3a23/Cyp3a1' ), thyroid_related_target := 'PXR']
+
+```
+
+```{r, warning=FALSE}
+
+ace.thyroid <- ace[!is.na(thyroid_related_target)]
+
+```
+
+## Pull the quantitative data
+
+```{r, warning=FALSE, echo=FALSE}
+
+# load multi-conc data
+# use tcplSubsetChid to downselect samples to a single representative sample per chemical considering quality of the spids 
+mc5 <- tcplPrepOtpt(tcplSubsetChid(tcplLoadData(val=ace.thyroid$aeid, lvl=5, type = 'mc',fld='aeid')))
+mc6 <- tcplPrepOtpt(tcplLoadData(lvl=6, fld='m4id', val=mc5$m4id, type='mc'))
+setDT(mc6)
+mc6_mthds <- mc6[ , .( mc6_mthd_id = paste(mc6_mthd_id, collapse=",")), by = m4id]
+mc6_flags <- mc6[ , .( flag = paste(flag, collapse=";")), by = m4id]
+mc5$mc6_flags <- mc6_mthds$mc6_mthd_id[match(mc5$m4id, mc6_mthds$m4id)]
+mc5[, flag.length := ifelse(!is.na(mc6_flags), count.fields(textConnection(mc6_flags), sep =','), NA)]
+
+# filter the dataset, with coarse filters
+mc5[hitc==1 & flag.length < 3, use.me := 1]
+mc5[hitc==1 & is.na(flag.length), use.me := 1]
+mc5[hitc==1 & flag.length >= 3, use.me := 0]
+mc5[fitc %in% c(36,45), use.me := 0]
+mc5[hitc==-1, use.me := 0] # data could not be curve-fitted (usually due to having < 4 concs)
+mc5[use.me==0, modl_ga := as.numeric(NA)] 
+mc5[use.me==0, hitc := 0] 
+mc5[hitc==0, modl_ga := as.numeric(NA)]
+
+mc5[hitc==1,ac50_uM := ifelse(!is.na(modl_ga), 10^modl_ga, NA)]
+mc5.hitc1 <- mc5[hitc==1]
+
+```
+
+## Pull the sc data
+
+```{r, warning=FALSE}
+
+sc2 <- tcplPrepOtpt(tcplSubsetChid(tcplLoadData(lvl=2, type='sc',val=ace.thyroid$aeid, fld='aeid'), type = 'sc')) # for max response and hitcally summary
+sc1 <- tcplPrepOtpt(tcplLoadData(lvl=1,type='sc',val=ace.thyroid$aeid, fld='aeid')) # for log concentration
+
+```
+
+## Create RData
+
+```{r, warning=FALSE, eval = FALSE}
+
+save(ace,
+     ace.thyroid,
+     cytotox,
+     gene,
+     mc5,
+     mc5.hitc1,
+     sc1, 
+     sc2, file='./data/invitrodb_v3_5_thyroid_data.RData')
+
+
+
+```
+
