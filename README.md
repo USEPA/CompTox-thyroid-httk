@@ -43,7 +43,7 @@ If you're interested in replicating the prioritization pipeline from top to bott
 After running the workflow, you can proceed to make the figures as described above. It is recommended to run the script for Figure 7 before that for Figure 8, since some redundancy has been factored out. 
 
 ## Dependencies
-All code was written and tested using R 4.4.1, and should run using later versions.
+All code was written and tested using R 4.4.1, and should run using later versions. Figures in the manuscript were generated with the versions of each library listed below:
 
 | Use Case | Package(s)
 |---------|---------|
