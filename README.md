@@ -6,14 +6,14 @@ This repository contains all the necessary code and data files to reproduce figu
 
 The code in this repository can be used to run the prioritization pipeline, from left to right, on your own (see [Usage for running the prioritization workflow from ToxCast data](#usage-for-running-the-prioritization-workflow-from-toxcast-data)). However, it's also possible to simply generate the figures in the manuscript without having to generate the underlying data from scratch (see [Usage for generating figures using preprocessed data from workflow](#usage-for-generating-figures-using-preprocessed-data-from-workflow)). 
 
-### Data Overview 
+## Data Overview 
 Scripts in the `scripts` directory reference source files in the `data/` folder. Because this work relies on many data sources, we highlight the major ones here:
 1. High-throughput screening (HTS) data: concentration-response profiling data on thyroid-related endpoints for thousands of chemicals from the US EPA's ToxCast program (`data/invitrodb_v3_5_thyroid_data.RData`)
 2. High-throughput toxicokinetic (HTTK) information for tens of thousands of chemicals available in the *httk* R package (will be available in version v2.6.0 on CRAN)
 3. High-throughput exposure predictions representing the median of total US population aggregate exposures from all exposure pathways considered, available for almost 700k substances from the ExpoCast SEEM3 model (`data/chem.preds-2018-11-28.RData`)
 4. _In vivo_ toxicity information from repeat-dose studies for over 7000 substances summarized from the US EPA's ToxValDB v9.4 (`data/toxval pods chemical level oral mgkgday.xlsx`). 
 
-### Usage for generating figures using preprocessed data from workflow
+## Usage for generating figures using preprocessed data from workflow
 If you'd rather not spend the time needed to process the data and run the HTTK models, I've included most of the numeric outputs in the `data/invitrodb_v3_5_deiod_filtered_httk.RData` object. Complete enrichment analysis could be reproduced with the _in vitro_ data from ToxCast as input without taking too much time (~2 minutes) by knitting `Supp3_Enrichment_Analysis.Rmd` within the `supplement/` subfolder of `scripts/`. Otherwise, all other scripts for generating the main figures in the manuscript are found in the `scripts/` directory. 
 
 Details with regards to reproducing individual figures are as follows:
@@ -34,7 +34,7 @@ Figures 6-11 mostly map to individual R files in the `scripts` directory as foll
 
 For Figures 7-8, one can just run the plotting sections noted in the corresponding scripts by doing `Ctrl + Alt + T`. Figures 1-3 were made in Powerpoint. 
 
-### Usage for running the prioritization workflow from ToxCast data
+## Usage for running the prioritization workflow from ToxCast data
 If you're interested in replicating the prioritization pipeline from top to bottom, the steps are as follows:
 1. Run all chunks in `data/invitrodb_v3_5_data.Rmd` for ToxCast data retrieval from invitrodb v3.5.
 2. Run `scripts/deiod_invitrodb_v3_5_processing.R` which carries out the ToxCast data filtering (see "Assessment for Selectivity + Assay Interference" and "Refinement" steps of the workflow). 
@@ -42,5 +42,15 @@ If you're interested in replicating the prioritization pipeline from top to bott
 
 After running the workflow, you can proceed to make the figures as described above. It is recommended to run the script for Figure 7 before that for Figure 8, since some redundancy has been factored out. 
 
-### Dependencies
-R library httk v2.6.0 and its relevant dependencies are required. See: https://github.com/USEPA/CompTox-ExpoCast-httk and https://cran.r-project.org/web/packages/httk/index.html
+## Dependencies
+All code was written and tested using R 4.4.1, and should run using later versions. Figures in the manuscript were generated with the versions of each library listed below:
+
+| Use Case | Package(s)
+|---------|---------|
+| General Data <br> Manipulation | data.table 1.16.2 <br> dplyr 1.1.4 <br> tidyr 1.3.1 <br> reshape2 1.4.4 |
+Plotting and <br> Visualization | ggplot2 3.5.1 <br> ggrepel 0.9.5 <br> ggvenn 0.1.10 <br> ggstar 1.0.4 <br> cowplot 1.1.3 <br> ggpubr 0.6.0 <br> RColorBrewer 1.1-3 <br> viridis 0.6.5 <br> viridisLite 0.4.2 <br> pheatmap 1.0.12 <br> dendextend 1.18.0 <br> latex2exp 0.9.6 <br> |
+Data Download <br> and Writing | openxlsx 4.2.6.1 <br> readxl 1.4.3 <br> tcpl 3.2.0 (dev)
+
+### Additional Code Dependencies
+- High-throughput toxicokinetics (*httk*) R package v2.6.0 and its relevant dependencies are required.
+    - See: https://github.com/USEPA/CompTox-ExpoCast-httk and https://cran.r-project.org/web/packages/httk/index.html
