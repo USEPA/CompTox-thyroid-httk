@@ -24,8 +24,7 @@ Supplemental File under Truong et al. (in preparation).
 
 ```{r setup, include = FALSE}
 library(knitr)
-knitr::opts_knit$set(root.dir = 'C:/Users/ktruong/OneDrive - Environmental Protection Agency (EPA)/Profile/Documents/thyroid_prioritization/doc/comptox-thyroid-httk')
-
+knitr::opts_knit$set(root.dir = 'C:/Users/ktruong/OneDrive - Environmental Protection Agency (EPA)/Profile/Documents/CompTox-thyroid-httk')
 ```
 
 ```{r, warning = FALSE, message = FALSE}
