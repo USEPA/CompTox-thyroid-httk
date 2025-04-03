@@ -2,7 +2,7 @@
 ### Kimberly T.Truong, John F. Wambaugh, Dustin F. Kapraun, Sarah E. Davidson-Fritz, Stephanie Eytcheson, Richard Judson, Katie Paul Friedman 
 
 This repository contains all the necessary code and data files to reproduce figures and tables in the manuscript as well as replicate the prioritization workflow, as described in Figure 1 shown here:
-![figure text](figures/fig1-workflow-v4.png)
+![figure text](figures/fig1-workflow-v5.png)
 
 The code in this repository can be used to run the prioritization pipeline, from left to right, on your own (see [Usage for running the prioritization workflow from ToxCast data](#usage-for-running-the-prioritization-workflow-from-toxcast-data)). However, it's also possible to simply generate the figures in the manuscript without having to generate the underlying data from scratch (see [Usage for generating figures using preprocessed data from workflow](#usage-for-generating-figures-using-preprocessed-data-from-workflow)). 
 
