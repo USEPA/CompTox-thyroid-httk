@@ -43,7 +43,6 @@ library(scales)
 library(ggpubr)
 library(openxlsx)
 library(readxl)
-library(ggh4x)
 
 load('./data/invitrodb_v3_5_thyroid_data.RData', verbose = T)
 
