@@ -502,6 +502,7 @@ uniq.positives <- ggarrange(flavos.venn, triazine.venn,
           nrow = 1, ncol = 2)
 
 uniq.positives
+dev.off()
 
 ggsave(plot = uniq.positives,
        units = "mm",
@@ -560,7 +561,7 @@ all_res <- bind_rows(res2)
 ```
 
 ## Results for colors vs. non-colors
-```{r, echo = FALSE}
+```{r, echo = FALSE, fig.width = 8, fig.height = 4}
 kable(all_res, caption = "For all assays")
 
 new.merged.colors <- merge.data.table(long_hitc_final, 
@@ -574,10 +575,13 @@ new.merged.colors.sel <- merge.data.table(long_hitc_final2,
                                all.x = T)
 
 # before selectivity filter
-display_venn(class = "Colors", hitc.class.dat = new.merged.colors, class_var = "main_class")
+venn_allcolors <- display_venn(class = "Colors", hitc.class.dat = new.merged.colors, class_var = "main_class")
 
 # after selectivity filter 
-display_venn(class = "Colors", hitc.class.dat = new.merged.colors.sel, class_var = "main_class")
+venn_selcolors <- display_venn(class = "Colors", hitc.class.dat = new.merged.colors.sel, class_var = "main_class")
+
+plot_grid(venn_allcolors, venn_selcolors, ncol = 2, 
+          labels = c("All Colors", "Selective Only"))
 
 ```
 
@@ -613,7 +617,7 @@ kable(res3$DIO3, caption = 'For DIO3')
 kable(res3$IYD, caption = 'For IYD')
 ```
 
-```{r, fig.width = 16, fig.height = 8}
+```{r, fig.width = 8, fig.height = 4}
 sig.colors <- c("Red", "Blue")
 
 new.merged.colors2 <- merge.data.table(long_hitc_final, 
@@ -631,9 +635,9 @@ sig.iyd.colors <- lapply(sig.colors, display_venn, hitc.class.dat = new.merged.c
 names(sig.iyd.colors) <- sig.colors
 
 # combine the plots into one figure
-ggarrange(plotlist = sig.iyd.colors, 
+iyd.a <- ggarrange(plotlist = sig.iyd.colors, 
           labels = names(sig.iyd.colors),
-          font.label = list(size = 20),
+          font.label = list(size = 10),
           nrow = 1, ncol = 2)
 
 # after selectivity filter 
@@ -641,10 +645,16 @@ sig.iyd.colors2 <- lapply(sig.colors, display_venn, hitc.class.dat = new.merged.
 names(sig.iyd.colors2) <- sig.colors
 
 # combine the plots into one figure
-ggarrange(plotlist = sig.iyd.colors2, 
+iyd.b <- ggarrange(plotlist = sig.iyd.colors2, 
           labels = names(sig.iyd.colors2),
-          font.label = list(size = 20),
+          font.label = list(size = 10),
           nrow = 1, ncol = 2)
+
+annotate_figure(iyd.a, top = text_grob("All Red/Blues", 
+               color = "red", face = "bold", size = 14))
+
+annotate_figure(iyd.b, top = text_grob("Selective Red/Blues Only", 
+               color = "red", face = "bold", size = 14))
 ```
 
 Venn Diagrams show results before and after applying a "selectivity" filter.
@@ -680,7 +690,7 @@ kable(res4$DIO3, caption = 'DIO3: For registered classes')
 ```
 
 ## IYD
-```{r, echo = FALSE, fig.width = 16, fig.height = 9}
+```{r, echo = FALSE, fig.width = 8, fig.height = 4}
 kable(res4$IYD, caption = 'IYD: For registered classes')
 
 sig.classes <- c("(F)D&C", "C.I.")
@@ -699,20 +709,25 @@ sig.iyd.classes <- lapply(sig.classes, display_venn, hitc.class.dat = new.merged
 names(sig.iyd.classes) <- sig.classes
 
 # combine the plots into one figure
-ggarrange(plotlist = sig.iyd.classes, 
+regA <- ggarrange(plotlist = sig.iyd.classes, 
           labels = names(sig.iyd.classes),
-          font.label = list(size = 20),
+          font.label = list(size = 10),
           nrow = 1, ncol = 2)
 
 sig.iyd.classes2 <- lapply(sig.classes, display_venn, hitc.class.dat = new.merged.regcolors.sel, class_var = "new_class")
 names(sig.iyd.classes2) <- sig.classes
 
 # combine the plots into one figure
-ggarrange(plotlist = sig.iyd.classes2, 
+regB <- ggarrange(plotlist = sig.iyd.classes2, 
           labels = names(sig.iyd.classes2),
-          font.label = list(size = 20),
+          font.label = list(size = 10),
           nrow = 1, ncol = 2)
 
+annotate_figure(regA, top = text_grob("All Registered Substances", 
+               color = "red", face = "bold", size = 14))
+
+annotate_figure(regB, top = text_grob("Selective Registered Substances Only", 
+               color = "red", face = "bold", size = 14))
 ```
 
 Venn Diagrams show results before and after applying a "selectivity" filter. 
