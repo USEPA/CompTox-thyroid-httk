@@ -43,6 +43,7 @@ library(scales)
 library(ggpubr)
 library(openxlsx)
 library(readxl)
+library(ggh4x)
 
 load('./data/invitrodb_v3_5_thyroid_data.RData', verbose = T)
 
@@ -925,7 +926,7 @@ acc_wide[, max_selectivity := pmax(DIO1_selectivity, DIO2_selectivity, DIO3_sele
 ```
 
 ## Figure 5 of Truong et al. 
-```{r, fig.width = 10, fig.height = 19}
+```{r, fig.width = 8.5, fig.height = 11}
 sig.chemotypes <- rownames(M.active[rs.active == 4, ])
 tp.sub <- as.data.frame(toxprints[, c("DTXSID", ..sig.chemotypes)])
 rownames(tp.sub) <- tp.sub$DTXSID
@@ -948,10 +949,13 @@ sel.m <- melt.data.table(sel.data,
 sel.m <- sel.m[!is.na(acc)]
 sel.m <- sel.m[order(-max_selectivity, -chnm)]
 
-# standardize themes 
+# standardize themes for selplot and class dist (C&D)
 my_theme <- theme_bw() +
-  theme(axis.text = element_text(size = 10),
-        legend.text = element_text(size = 10))
+  theme(axis.text.x = element_text(size = 7),
+        legend.text = element_text(size = 6), 
+        axis.title = element_text(size = 7), 
+        legend.title = element_text(size = 6), 
+        strip.text = element_text(size = 7)) # controls facet label size
 
 # SELECTIVITY DOTPLOT
 dotplot <- ggplot(data = sel.m, 
@@ -959,7 +963,7 @@ dotplot <- ggplot(data = sel.m,
                      y = acc)) +
   geom_point(aes(color = assay, shape = assay), 
              alpha = 0.8, 
-             size = 2.5) +
+             size = 1.5) + # default size 
   scale_shape_manual(values = c("DIO1_acc" = 16, "DIO2_acc" = 16, 
                                 "DIO3_acc" = 16, "IYD_acc" = 16,
                                 "cytomed" = 8)) +
@@ -968,6 +972,7 @@ dotplot <- ggplot(data = sel.m,
            ymin = floor(min(sel.m$acc)), ymax = ceiling(max(sel.m$acc)),
            alpha = .1, fill = "red") +
   my_theme + 
+  theme(axis.text.y = element_text(size = 5)) +
   labs(x = 'Chemical', 
        y = bquote(Concentration ~ at ~ "Threshold ("*log[10]~ mu*"M)")) +
   coord_flip()
@@ -986,8 +991,8 @@ venn_obj <- ggvenn(testedChems.by.assay,
        show_percentage = FALSE, 
        fill_color = c("#999999", "#E69F00", "#56B4E9", "#009E73"),
        stroke_linetype = "blank", 
-       text_size = 4,
-       set_name_size = 3.8) +
+       text_size = 2.5,
+       set_name_size = 2.5) +
   scale_y_continuous(expand = expansion(mult = .1)) # fix labels cropped at the top with this ggplot trick
 
 # class x hitc distribution of these chems 
@@ -1025,15 +1030,30 @@ barchart <- ggplot(class.hitc.dist,
        aes(x= reorder(chosen_class, pct_of_Nchemotypes),  
            y=pct_of_Nchemotypes, fill=chosen_class)) +
   geom_bar(stat="identity") +
-  my_theme +
-  theme(legend.position = "none", 
-       plot.title.position = "plot", 
-       plot.title = element_text(hjust = 0.15, vjust = 0.6)) +
+  # my_theme +
+  # theme(legend.position = "none") +
+       # plot.title.position = "plot", 
+       # plot.title = element_text(size = 8, hjust = 0.1, vjust = 0.5)) +
   coord_flip() +
   facet_grid(hitcall ~ assay, scales = "free_y") +
   labs(x = "Class", 
-       y = "% of Chemicals with Given Chemotype(s) found Active or Inactive for Target", 
-       title = "Class Distribution of Chemicals with chain:alkaneLinear_C(8,10,12,14) chemotype")
+       y = "% of Chemicals with the chain:alkaneLinear_C(8,10,12,14) chemotype found Active or Inactive for Target")
+       # title = "Class Distribution of Chemicals with chain:alkaneLinear_C(8,10,12,14) chemotypes") # remove title for more space
+
+# this is the only way I found for modifying individual facets and their themes
+# keep active row theme the same 
+for(i in 1:4) {
+  barchart <- barchart + 
+    my_theme + 
+    theme(legend.position = "none", 
+          axis.text.y = element_text(size = 6))
+}
+
+# make inactive row's y axis tick labels a tad smaller
+barchart <- barchart + 
+  my_theme + 
+  theme(legend.position = "none", 
+        axis.text.y = element_text(size = 5))
 
 class.hitc.dist[hitcall == "active", total_pct := sum(pct), by = assay]
 
@@ -1055,51 +1075,53 @@ active.pie <- active.pie %>%
 # % OF ACTIVES AS A PIECHART 
 piechart <- ggplot(active.pie, 
                    aes(x="", y=total_pct, fill = in_group)) +
-  geom_bar(stat="identity", width = 1, color = "black") +
+  geom_bar(stat="identity", width = 1, color = "black", linewidth = 0.25) +
   coord_polar("y", start=0) +
   ylim(0, 100) +
   scale_fill_discrete(name = "", 
                       labels = c("Actives not represented by chemotypes", "Actives represented by chemotypes")) +
   facet_wrap(~ assay, nrow =  1) +
   geom_text(aes(x = 1.25, label = ifelse(in_group, paste0(round(total_pct), "%"), "")),
-            color = "black", size = 13/.pt, 
+            color = "black", size = 6.5/.pt, 
             position = position_stack(vjust = 0.5)) +
   theme_void() + 
   theme(legend.position = "bottom",
-        legend.text = element_text(size = 12), 
-        text = element_text(size = 14), 
+        legend.text = element_text(size = 7),
+        legend.key.size = unit(0.5, "cm"),
+        strip.text = element_text(size = 7),
+        text = element_text(size = 7), 
         plot.margin = unit(c(1,0.5,0,0.5), "lines")) 
 
 aplusb <- plot_grid(piechart, NULL, venn_obj, rel_heights = c(1,1,1), 
                     rel_widths = c(0.7, 0.05, 0.3),
                     nrow = 1, 
                     labels = c("A", "B"), 
-                    label_x = 0, label_y = 0.8, label_size = 20)
+                    label_x = 0, label_y = 0.8, label_size = 15)
 
 cplusd <- plot_grid(barchart, dotplot, rel_heights = c(1.4, 1), 
                     rel_widths = c(1, 0.5), 
                     nrow = 2, 
                     labels = c("C", "D"), 
-                    label_x = 0, label_y = 1, label_size = 20)
+                    label_x = 0, label_y = 1, label_size = 15)
 
 fig <- plot_grid(aplusb, cplusd,
-          rel_heights = c(0.2, 0.8), rel_widths = c(1,1), nrow = 2)
+          rel_heights = c(0.15, 0.85), rel_widths = c(1,1), nrow = 2)
 
 fig
 
-ggsave(plot = fig, 
-       units = "in", 
-       dpi = 300, 
-       width = 10, height = 19, 
-       device = "tiff", 
-       filename = "./figures/300dpi/longchainc_panactive.tiff")
+ggsave(plot = fig,
+       units = "mm",
+       dpi = 300,
+       width = 190, height = 240,
+       device = "tiff",
+       filename = "./figures/300dpi/longchainc_panactive_v2.tiff")
 
 ggsave(plot = fig, 
-       units = "in", 
+       units = "mm", 
        dpi = 300, 
-       width = 10, height = 19, 
+       width = 190, height = 240, 
        device = "png", 
-       filename = "./figures/longchainc_panactive.png")
+       filename = "./figures/longchainc_panactive_v2.png")
 
 # save to RData for later processing 
 # save(longchainc.chems,
