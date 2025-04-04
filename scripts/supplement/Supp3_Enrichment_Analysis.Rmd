@@ -395,16 +395,6 @@ res$`class annotations` = classified_dt
 
 # Hits by Target {.tabset .tabset-fade .tabset-pills}
 ```{r, message = FALSE, warning = FALSE}
-
-# organize based on odds ratios 
-inf.or <- c("Aryl chlorides", "Fungicide Phthalimide Multi-site activity")
-sig.or <- c("Quaternary ammonium salts", "Herbicide Chloroacetamide Very Long-Chain Fatty Acid Synthesis inhibitor", 
-            "Estrogen nonsteroidal", "Bisphenol", 
-            "Estrogen flavonoid", "Antibiotic polyketide", 
-            "Insecticide Arylalkyl organothiophosphate AChE Inhibitor", 
-            "Herbicide Triazine Inhibition of photosynthesis at PSll", 
-            "Insecticide Chlorinated cyclodiene GABA-gated chloride channel blocker", "PFAAs", 
-            "1-hydroxy-2-unsubstituted benzenoids")
   
 # helper function to draw the Venn Diagram for an input class 
 # this only counts chemicals that were uniformly tested across all 4 targets 
@@ -431,9 +421,11 @@ display_venn <- function(class, hitc.class.dat, class_var) {
   venn_obj <- ggvenn(list_venn, 
        show_percentage = FALSE, 
        fill_color = c("#0073C2FF", "#EFC000FF", "#868686FF", "#CD534CFF"),
-       text_size = 6) +
+       text_size = 3, 
+       set_name_size = 3, 
+       stroke_size = 0.5) +
   annotate("text", x = 2, y = -0.5, label = ifelse(!is.na(hit.freqs["0"]), hit.freqs["0"], ""), 
-           size = 6)
+           size = 3)
   
   return(venn_obj)
 }
@@ -441,7 +433,10 @@ display_venn <- function(class, hitc.class.dat, class_var) {
 ```
 
 ## Odds Ratio == Inf 
-```{r, fig.width = 16, fig.height = 12}
+```{r, fig.width = 8, fig.height = 6}
+# organize based on odds ratios 
+inf.or <- c("Aryl chlorides", "Fungicide Phthalimide Multi-site activity")
+
 merged_dat.sel <- merge.data.table(long_hitc_final,
                         classified_dt[,.(dsstox_substance_id,name,class_type,chosen_class)],
                                by = c("dsstox_substance_id"),
@@ -453,7 +448,7 @@ names(infor_list) <- inf.or
 # combine the plots into one figure
 ggarrange(infor_list$`Aryl chlorides`, infor_list$`Fungicide Phthalimide Multi-site activity`,
           labels = names(infor_list),
-          font.label = list(size = 18),
+          font.label = list(size = 9),
           hjust = -0.25, 
           label.y = 0.8,
           nrow = 1, ncol = 2)
@@ -461,7 +456,16 @@ ggarrange(infor_list$`Aryl chlorides`, infor_list$`Fungicide Phthalimide Multi-s
 ```
 
 ## Odds Ratio > 3
-```{r, fig.width = 18, fig.height = 25}
+```{r, fig.width = 9, fig.height = 12.5}
+
+sig.or <- c("Quaternary ammonium salts", "Herbicide Chloroacetamide Very Long-Chain Fatty Acid Synthesis inhibitor", 
+            "Estrogen nonsteroidal", "Bisphenol", 
+            "Estrogen flavonoid", "Antibiotic polyketide", 
+            "Insecticide Arylalkyl organothiophosphate AChE Inhibitor", 
+            "Herbicide Triazine Inhibition of photosynthesis at PSll", 
+            "Insecticide Chlorinated cyclodiene GABA-gated chloride channel blocker", "PFAAs", 
+            "1-hydroxy-2-unsubstituted benzenoids")
+
 sigor_list <- lapply(sig.or, display_venn, hitc.class.dat = merged_dat, class_var = "chosen_class")
 names(sigor_list) <- sig.or
 
@@ -470,6 +474,7 @@ sig.class.labels <- names(sigor_list)
 # combine the plots into one figure
 ggarrange(plotlist = sigor_list, 
           labels = sig.class.labels,
+          font.label = list(size = 7),
           label.y = 0.97,
           label.x = c(0, -0.20, 0.05, 0.10, 0.05, 0, -0.10, -0.08, -0.15, 0.15, -0.05),
           hjust = -0.25,
@@ -478,19 +483,19 @@ ggarrange(plotlist = sigor_list,
 ```
 
 ## Figure 4 of Truong et al. 
-```{r, fig.width = 16, fig.height = 12}
+```{r, fig.width = 8, fig.height = 6}
 # focus on triazines and estrogen flavonoids for paper
 flavos.venn <- sigor_list$`Estrogen flavonoid` + 
   annotate("text", x = 0, y = -2, label = "Estrogen flavonoids",
-            size = 6, fontface= "bold") 
+            size = 3, fontface= "bold") 
 
 triazine.venn <- sigor_list$`Herbicide Triazine Inhibition of photosynthesis at PSll` +
   annotate("text", x = 0, y = -2, label = "Herbicide Triazines Inhibition of photosynthesis at PSll",
-            size = 6, fontface= "bold") 
+            size = 3, fontface= "bold") 
 
 uniq.positives <- ggarrange(flavos.venn, triazine.venn,
           labels = c("A", "B"),
-          font.label = list(size = 25),
+          font.label = list(size = 15), 
           label.x = 0,
           label.y = 0.8,
           hjust = 0,
@@ -499,18 +504,18 @@ uniq.positives <- ggarrange(flavos.venn, triazine.venn,
 uniq.positives
 
 ggsave(plot = uniq.positives,
-       units = "in",
+       units = "mm",
        dpi = 300,
-       width = 15, height = 12,
+       width = 190, height = 152,
        device = "tiff",
-       filename = "./figures/300dpi/uniq_positives.tiff")
+       filename = "./figures/300dpi/uniq_positives_v2.tiff")
 
 ggsave(plot = uniq.positives,
-       units = "in",
+       units = "mm",
        dpi = 300,
-       width = 15, height = 12,
+       width = 190, height = 152,
        device = "png",
-       filename = "./figures/uniq_positives.png")
+       filename = "./figures/uniq_positives_v2.png")
 
 ```
 
@@ -779,12 +784,12 @@ kable(sig.res$DIO3, caption = 'For DIO3')
 kable(sig.res$IYD, caption = 'For IYD')
 ```
 
-## Update Supplemental File 2
+## Output Supplemental File 2
 ```{r}
 names(tp.res) <- paste0(aenm.abbrevs, "-CT")
 tp.res$chemotypes <- toxprints
 
-write.xlsx(c(res,tp.res), file = "./tables/Supp2_Class&ToxPrint_Enrichment_AllResults.xlsx")
+# write.xlsx(c(res,tp.res), file = "./tables/Supp2_Class&ToxPrint_Enrichment_AllResults.xlsx")
 
 ```
 
