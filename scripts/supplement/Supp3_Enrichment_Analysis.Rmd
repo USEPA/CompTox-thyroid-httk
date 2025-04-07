@@ -482,7 +482,7 @@ ggarrange(plotlist = sigor_list,
 
 ```
 
-## Figure 4 of Truong et al. 
+## Figure 3 of Truong et al. 
 ```{r, fig.width = 8, fig.height = 6}
 # focus on triazines and estrogen flavonoids for paper
 flavos.venn <- sigor_list$`Estrogen flavonoid` + 
@@ -924,8 +924,8 @@ acc_wide[, max_selectivity := pmax(DIO1_selectivity, DIO2_selectivity, DIO3_sele
 
 ```
 
-## Figure 5 of Truong et al. 
-```{r, fig.width = 8.5, fig.height = 11}
+## Figure 4 and 5 of Truong et al. 
+```{r ggplts-4-and-5}
 sig.chemotypes <- rownames(M.active[rs.active == 4, ])
 tp.sub <- as.data.frame(toxprints[, c("DTXSID", ..sig.chemotypes)])
 rownames(tp.sub) <- tp.sub$DTXSID
@@ -948,14 +948,6 @@ sel.m <- melt.data.table(sel.data,
 sel.m <- sel.m[!is.na(acc)]
 sel.m <- sel.m[order(-max_selectivity, -chnm)]
 
-# standardize themes for selplot and class dist (C&D)
-my_theme <- theme_bw() +
-  theme(axis.text.x = element_text(size = 7),
-        legend.text = element_text(size = 6), 
-        axis.title = element_text(size = 7), 
-        legend.title = element_text(size = 6), 
-        strip.text = element_text(size = 7)) # controls facet label size
-
 # SELECTIVITY DOTPLOT
 dotplot <- ggplot(data = sel.m, 
        mapping = aes(x = reorder(chnm,max_selectivity), 
@@ -970,8 +962,12 @@ dotplot <- ggplot(data = sel.m,
            xmax = tail(sel.m[max_selectivity < 0.3], n = 1)[, chnm],
            ymin = floor(min(sel.m$acc)), ymax = ceiling(max(sel.m$acc)),
            alpha = .1, fill = "red") +
-  my_theme + 
-  theme(axis.text.y = element_text(size = 5)) +
+  theme_bw() +
+  theme(axis.text.y = element_text(size = 5.5),
+        axis.text.x = element_text(size = 6.5),
+        axis.title = element_text(size = 7), 
+        legend.text = element_text(size = 6), 
+        legend.title = element_text(size = 6)) +
   labs(x = 'Chemical', 
        y = bquote(Concentration ~ at ~ "Threshold ("*log[10]~ mu*"M)")) +
   coord_flip()
@@ -992,7 +988,8 @@ venn_obj <- ggvenn(testedChems.by.assay,
        stroke_linetype = "blank", 
        text_size = 2.5,
        set_name_size = 2.5) +
-  scale_y_continuous(expand = expansion(mult = .1)) # fix labels cropped at the top with this ggplot trick
+  scale_y_continuous(expand = expansion(mult = .1)) + # fix labels cropped at the top with this ggplot trick; this adds more padding to the y-axis
+  scale_x_continuous(expand = expansion(mult = .1)) # fix "DIO1" label being slightly cropped in the same way
 
 # class x hitc distribution of these chems 
 actives <- merged_dat[dsstox_substance_id %in% longchainc.chems & hitc == 1, 
@@ -1029,8 +1026,12 @@ barchart <- ggplot(class.hitc.dist,
        aes(x= reorder(chosen_class, pct_of_Nchemotypes),  
            y=pct_of_Nchemotypes, fill=chosen_class)) +
   geom_bar(stat="identity") +
-  # my_theme +
-  # theme(legend.position = "none") +
+  theme_bw() +
+  theme(legend.position = "none",
+        axis.title = element_text(size = 8), 
+        strip.text = element_text(size = 8),  # controls facet label size 
+        axis.text.y = element_text(size = 6),
+        axis.text.x = element_text(size = 7)) +
        # plot.title.position = "plot", 
        # plot.title = element_text(size = 8, hjust = 0.1, vjust = 0.5)) +
   coord_flip() +
@@ -1041,18 +1042,15 @@ barchart <- ggplot(class.hitc.dist,
 
 # this is the only way I found for modifying individual facets and their themes
 # keep active row theme the same 
-for(i in 1:4) {
-  barchart <- barchart + 
-    my_theme + 
-    theme(legend.position = "none", 
-          axis.text.y = element_text(size = 6))
-}
-
-# make inactive row's y axis tick labels a tad smaller
-barchart <- barchart + 
-  my_theme + 
-  theme(legend.position = "none", 
-        axis.text.y = element_text(size = 5))
+# for(i in 1:4) {
+#   barchart <- barchart +
+#     theme(axis.text.y = element_text(size = 7))
+# }
+# 
+# # make inactive row's y axis tick labels a tad smaller
+# for(i in 5:8) {
+#   barchart <- barchart + theme(axis.text.y = element_text(size = 6))  
+# }
 
 class.hitc.dist[hitcall == "active", total_pct := sum(pct), by = assay]
 
@@ -1083,44 +1081,83 @@ piechart <- ggplot(active.pie,
   geom_text(aes(x = 1.25, label = ifelse(in_group, paste0(round(total_pct), "%"), "")),
             color = "black", size = 6.5/.pt, 
             position = position_stack(vjust = 0.5)) +
-  theme_void() + 
+  theme_void() +
   theme(legend.position = "bottom",
         legend.text = element_text(size = 7),
-        legend.key.size = unit(0.5, "cm"),
+        legend.key.size = unit(0.25, "cm"),
         strip.text = element_text(size = 7),
         text = element_text(size = 7), 
         plot.margin = unit(c(1,0.5,0,0.5), "lines")) 
+```
 
+```{r fig4, fig.width = 6.4, fig.height = 1.7, fig.align = 'center'}
 aplusb <- plot_grid(piechart, NULL, venn_obj, rel_heights = c(1,1,1), 
-                    rel_widths = c(0.7, 0.05, 0.3),
+                    rel_widths = c(0.65, 0.05, 0.3),
                     nrow = 1, 
                     labels = c("A", "B"), 
-                    label_x = 0, label_y = 0.8, label_size = 15)
+                    label_x = -0.01, label_y = 0.9, label_size = 10)
+print(aplusb)
 
-cplusd <- plot_grid(barchart, dotplot, rel_heights = c(1.4, 1), 
-                    rel_widths = c(1, 0.5), 
+# separate into two figures: Figure 4 
+ggsave(plot = aplusb,
+       units = "mm",
+       dpi = 300,
+       width = 140, height = 36,
+       device = "png",
+       filename = "./figures/longchainc_panactive_pie&venn.png")
+
+ggsave(plot = aplusb,
+       units = "mm",
+       dpi = 300,
+       width = 140, height = 36,
+       device = "tiff",
+       filename = "./figures/300dpi/longchainc_panactive_pie&venn.tiff")
+```
+
+```{r fig5, fig.width = 8.5, fig.height = 11}
+cplusd <- plot_grid(barchart, dotplot, rel_heights = c(0.6, 0.4), 
                     nrow = 2, 
-                    labels = c("C", "D"), 
+                    axis = "l",
+                    labels = c("A", "B"), 
                     label_x = 0, label_y = 1, label_size = 15)
 
-fig <- plot_grid(aplusb, cplusd,
-          rel_heights = c(0.15, 0.85), rel_widths = c(1,1), nrow = 2)
+print(cplusd)
 
-fig
+# Figure 5
+ggsave(plot = cplusd,
+       units = "mm",
+       dpi = 300,
+       width = 190, height = 240,
+       device = "png",
+       filename = "./figures/longchainc_panactive_class&sel.png")
 
-ggsave(plot = fig,
+ggsave(plot = cplusd,
        units = "mm",
        dpi = 300,
        width = 190, height = 240,
        device = "tiff",
-       filename = "./figures/300dpi/longchainc_panactive_v2.tiff")
+       filename = "./figures/300dpi/longchainc_panactive_class&sel.tiff")
 
-ggsave(plot = fig, 
-       units = "mm", 
-       dpi = 300, 
-       width = 190, height = 240, 
-       device = "png", 
-       filename = "./figures/longchainc_panactive_v2.png")
+
+# combining them into one pg makes text in C&D small
+# fig <- plot_grid(aplusb, cplusd,
+#           rel_heights = c(0.15, 0.85), rel_widths = c(1,1), nrow = 2)
+# 
+# fig
+# 
+# ggsave(plot = fig,
+#        units = "mm",
+#        dpi = 300,
+#        width = 190, height = 240,
+#        device = "tiff",
+#        filename = "./figures/300dpi/longchainc_panactive_v2.tiff")
+# 
+# ggsave(plot = fig, 
+#        units = "mm", 
+#        dpi = 300, 
+#        width = 190, height = 240, 
+#        device = "png", 
+#        filename = "./figures/longchainc_panactive_v2.png")
 
 # save to RData for later processing 
 # save(longchainc.chems,
