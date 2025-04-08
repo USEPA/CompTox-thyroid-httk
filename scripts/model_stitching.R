@@ -6,7 +6,7 @@
 # 
 # @author: Kimberly Truong
 # created: 10/24/23
-# updated: 3/10/25
+# updated: 4/8/25
 # ==============================================================================
 
 rm(list=ls())
@@ -23,8 +23,6 @@ library(ggpubr)
 library(cowplot)
 
 # Show Mass/Volume Conservation at Week 13 transition --------------------------
-# estimate PK half-life of Fipronil
-half.life <- calc_half_life(chem.name = "Fipronil")
 
 # distinguish maternal from fetal compartments  
 maternal_compts <- c('gut', 'liver', 'kidney', 'lung', 'ven', 'art', 
@@ -98,25 +96,24 @@ ggdata2[volume == "Vpoc", model := "fetal_pbtk"]
 
 # for reusing themes
 my_theme <-  theme_bw() + 
-  theme(title = element_text(size = 14),
-        axis.title = element_text(size = 14),
-        axis.text = element_text(size = 12), 
-        legend.text = element_text(size = 14, hjust = 0), 
-        legend.background = element_blank()) 
+  theme(axis.title = element_text(size = 9),
+        axis.text = element_text(size = 8), 
+        legend.text = element_text(size = 9, hjust = 0), 
+        legend.background = element_blank(),
+        legend.position = "bottom", 
+        legend.direction = "vertical",
+        legend.margin=margin(-15, 0, 0, 0))
 
 volpp <- ggplot(ggdata2, 
        aes(x = time, y = value, color = model)) +
-  geom_line(linewidth = 2) +
+  geom_line(linewidth = 1) +
   scale_color_manual(labels = c(TeX("$V_{conceptus}$"), TeX("$V_{fetus} + V_{placenta} + V_{amnf}$")), 
                      values = c('1tri_pbtk' = '#7CAE00', 'fetal_pbtk' = '#C77CFF')) +
   geom_vline(xintercept = 13, 
-             linetype = 'dashed', color = 'black', linewidth = 1.25) +
+             linetype = 'dashed', color = 'black', linewidth = 1) +
   labs(x = 'Gestational Age (weeks)', y = 'Volume (L)', 
        color = "", ) +
-  my_theme +
-  theme(legend.position = "bottom", 
-        legend.direction = "vertical", 
-        legend.margin=margin(-15, 0, 0, 0))
+  my_theme 
   
 # check for mass conservation at 13 weeks 
 conceptus_density <- 1 # kg/L
@@ -135,18 +132,15 @@ mass_dat.m[which(mass_dat.m$time > 13), model := "fetal_pbtk"]
 
 masspp <- ggplot(mass_dat.m, 
        aes(x = time, y = value, color = model)) +
-  geom_line(linewidth = 2) +
+  geom_line(linewidth = 1) +
   scale_color_manual(labels = c(TeX("$W_{conceptus}$"), 
                                 TeX("$W_{fetus} + W_{placenta} + W_{amnf}$")), 
                      values = c('1tri_pbtk' = '#F8766D', 'fetal_pbtk' = '#00BFC4')) +
   geom_vline(xintercept = 13, 
-             linetype = 'dashed', color = 'black', linewidth = 1.25) +
+             linetype = 'dashed', color = 'black', linewidth = 1) +
   labs(x = 'Gestational Age (weeks)', y = 'Mass (kg)', 
        color = "") +
-  my_theme +
-  theme(legend.position = "bottom", 
-        legend.direction = "vertical", 
-        legend.margin=margin(-15, 0, 0, 0))
+  my_theme 
 
 # Dynamical Kconceptus2pu parameter --------------------------------------------
 
@@ -201,43 +195,55 @@ ylims <- c(floor(min(df$Kconceptus2pu_initial.log10)), ceiling(max(df$Kconceptus
 # show only two example chems with +/- slopes 
 Kconc.pp <- ggplot(df[which(df$chnm %in% c("Ergocalciferol", "Terbutylazine")),]) + 
   geom_abline(aes(intercept = Kconceptus2pu_initial.log10, slope = m, color = factor(chnm)), 
-              linewidth = 1.5) +
+              key_glyph = draw_key_smooth, # change glyph from draw_key_abline
+              linewidth = 1) +
   scale_x_continuous(breaks = seq(0,13), 
                      labels = as.character(seq(0,13)), 
                      limits = c(0,13)) +
   scale_y_continuous(breaks = seq(ylims[1], ylims[2], 1), 
                      limits = ylims) +
-  scale_color_manual(values = c('Terbutylazine' = '#FFB900', 'Ergocalciferol' = '#5773CC')) +
+  scale_color_manual(name = "",
+    values = c('Terbutylazine' = '#FFB900', 
+               'Ergocalciferol' = '#5773CC')) +
   labs(x = "Gestational Age (weeks)", y = TeX("$log_{10} K_{conceptus2pu}$")) +
   my_theme +
-  theme(legend.position = "none") +
-  annotate("text", x = 11, y = 5.5, label = "Ergocalciferol", 
-           size = 5) +
-  annotate("text", x = 11, y = 0.6, label = "Terbutylazine", 
-           size = 5)
+  theme(legend.text = element_text(size = 7.5), 
+        legend.key.size = unit(1, "line")) 
+  # annotate("text", x = 11, y = 5.5, label = "Ergocalciferol", 
+  #          size = 5) +
+  # annotate("text", x = 11, y = 0.6, label = "Terbutylazine", 
+  #          size = 5)
 
-# put it all together
-fig <- ggdraw() +
-  draw_plot(volpp, x = 0, y = 0.5, width = 0.5, height = 0.5) +
-  draw_plot(masspp, x = 0.5, y = 0.5, width = 0.5, height = 0.5) +
-  draw_plot(Kconc.pp, x = 0.10, y = 0, width = 0.75, height = 0.5) +
-  draw_plot_label(label = c("A", "B", "C"), 
-                  size = 15, 
-                  x = c(0, 0.5, 0), 
-                  y = c(1, 1, 0.5))
-fig
+# # put it all together
+# fig <- ggdraw() +
+#   draw_plot(volpp, x = 0, y = 0.5, width = 0.5, height = 0.5) +
+#   draw_plot(masspp, x = 0.5, y = 0.5, width = 0.5, height = 0.5) +
+#   draw_plot(Kconc.pp, x = 0.10, y = 0, width = 0.75, height = 0.5) +
+#   draw_plot_label(label = c("A", "B", "C"), 
+#                   size = 15, 
+#                   x = c(0, 0.5, 0), 
+#                   y = c(1, 1, 0.5))
+# fig
 
-ggsave(plot = fig, 
-       units = "in", 
+fig2 <- plot_grid(volpp, masspp, Kconc.pp, 
+                  ncol =3 ,
+                  align = "h",
+                  rel_widths = c(1,1,1.2), 
+                  labels = "AUTO", 
+                  label_size = 10)
+
+
+ggsave(plot = fig2,
+       units = "mm",
+       dpi = 300,
+       width = 190, height = 80,
+       device = "tiff",
+       filename = "./figures/300dpi/model_stitching-v4.tiff")
+
+ggsave(plot = fig2, 
+       units = "mm", 
        dpi = 300, 
-       width = 8.1, height = 8.2, 
-       device = "tiff", 
-       filename = "./figures/300dpi/model_stitching-v3.tiff")
-
-ggsave(plot = fig, 
-       units = "in", 
-       dpi = 300, 
-       width = 8.1, height = 8.2, 
+       width = 190, height = 80, 
        device = "png", 
-       filename = "./figures/model_stitching-v3.png")
+       filename = "./figures/model_stitching-v4.png")
 
