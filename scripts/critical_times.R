@@ -8,7 +8,7 @@
 # 
 # @author: Kimberly Truong
 # created: 2/1/2023
-# updated: 4/1/2025
+# updated: 4/10/2025
 # ==============================================================================
 
 rm(list=ls())
@@ -21,6 +21,7 @@ library(latex2exp)
 library(cowplot)
 library(viridis)
 library(openxlsx)
+library(DescTools)
 
 load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', verbose = TRUE)
 
@@ -63,7 +64,9 @@ for(i in 1:nrow(ivive.moe.tb)) {
                             time.course = seq(0, 40*7, 1/24),
                             track.vars = impacted_tissues, 
                             physchem.exclude = FALSE)
-
+  
+  # convert to dataframe for mapply operations below
+  sol.out <- as.data.frame(sol.out)
   
   # function to find time to reach Cmax from scaled output dataframe   
   # acts on each column of the dataframe but also need the entire dataframe 
@@ -129,7 +132,7 @@ setDT(Cmax.times.m)
 Cmax.times.m[, lifestage := "maternal"]
 Cmax.times.m[substr(compt,1,2) == "Cf" | compt %in% c("Cconceptus", "Cplacenta"), lifestage := "fetal"]
 
-# Add Days to reach Cmax to Table 7 --------------------------------------------
+# Add Days to reach Cmax to Table 8 --------------------------------------------
 # Ignore running this section unless you want to reproduce the entire workflow from scratch.
 # Results are stored in "./data/invitrodb_v3_5_deiod_filtered_httk.RData."
 
@@ -138,21 +141,21 @@ plasma.tissue.bers[, target := mapply(function(x) targets[x],
                                       apply(plasma.tissue.bers[, paste0(targets, "_BER"), with = FALSE], 1, which.min))]
 setnames(plasma.tissue.bers, "most_sensitive_tissue", "compt")
 
-table7 <- merge.data.table(plasma.tissue.bers, Cmax.times.m[, -c("lifestage")], 
+table8 <- merge.data.table(plasma.tissue.bers, Cmax.times.m[, -c("lifestage")], 
                            by = c("dtxsid", "chnm", "target", "compt"), 
                            all.x = TRUE) 
 
 # collapse multiple sensitive tissues and their tmaxes (time to reach Cmax in each tissue)
-table7[, most_sensitive_tissues := paste(compt, collapse = ", ") , by = .(dtxsid, target)]
-table7[, tmax := signif(tmax, digits = 3)] # httk values have been reported to 3 sigfigs
-table7[, day_at_Cmax := paste(tmax, collapse = ", "), by = .(dtxsid, target)]
+table8[, most_sensitive_tissues := paste(compt, collapse = ", ") , by = .(dtxsid, target)]
+table8[, tmax := signif(tmax, digits = 3)] # httk values have been reported to 3 sigfigs
+table8[, day_at_Cmax := paste(tmax, collapse = ", "), by = .(dtxsid, target)]
 
 keep_cols <- c("dtxsid", "chnm", "plasma_BER50", 
                paste0(targets, "_BER"), "min_BER", 
                "most_sensitive_tissues", "day_at_Cmax")
-table7 <- unique(table7[, ..keep_cols])
-table7 <- table7[order(min_BER)]
-write.xlsx(table7, "./tables/Table7_preg_vs_nonpregBERs_v3.xlsx", colnames = T)
+table8 <- unique(table8[, ..keep_cols])
+table8 <- table8[order(min_BER)]
+write.xlsx(table8, "./tables/Table8_preg_vs_nonpregBERs_v4.xlsx", colnames = T)
 
 # Find the Minimum Day for each Maternal/Fetal Tissue and Chem -----------------
 # Ignore running this section unless you want to reproduce the entire workflow from scratch.
@@ -169,40 +172,46 @@ ecdf.data <- unique(ecdf.data[, `:=` (compt = NULL, target = NULL)])
 # convert to weeks 
 ecdf.data[, min_tstar := (min_tstar/7)]
 
+# convert to 2 sigfigs 
+ecdf.data[, min_tstar := signif(min_tstar, digits = 2)]
+
 # PLOTTING ECDF CURVES ---------------------------------------------------------
 # reuse theme aesthetics
 my_theme <-  theme_bw() + 
-  theme(title = element_text(size = 14),
-        axis.title = element_text(size = 14, face = "bold"),
-        axis.text = element_text(size = 12), 
-        legend.text = element_text(size = 12), 
+  theme(axis.title = element_text(size = 8, face = "bold"),
+        axis.text = element_text(size = 7), 
+        legend.title = element_text(size = 7),
+        legend.text = element_text(size = 7), 
         legend.background = element_blank()) 
 
 my_viridis_colors <- viridis(n = 3)
 
 # plot ECDF for times to reach Cmax in maternal vs fetal tissues
 cdfpp <- ggplot(ecdf.data, aes(min_tstar, color = lifestage)) + 
-  stat_ecdf(linewidth = 1) +
+  stat_ecdf(linewidth = 0.5) +
   scale_x_continuous(limits = c(0, 40), 
                      breaks = c(seq(0,10,2), 13, seq(15,40,5))) +
   scale_color_manual(labels = c(TeX("$min(T^{*}_{f})$ Min week to reach Cmax in the conceptus, placenta, \n or fetal compartment (thyroid, liver, or brain)"), 
-                                TeX("$min(T^{*}_{m})$: Min week to reach Cmax in the liver or thyroid of the mother")), 
+                                TeX("$min(T^{*}_{m})$ Min week to reach Cmax in the liver \n or thyroid of the mother")), 
                      values = c(my_viridis_colors[2], my_viridis_colors[1])) +
   geom_vline(xintercept = 13, 
-             linetype = 'dashed', color = my_viridis_colors[3], linewidth = 1) +
+             linetype = 'dashed', color = my_viridis_colors[3], linewidth = 0.75) +
   my_theme + 
+  guides(color = guide_legend(nrow = 2, byrow = TRUE)) + # need this for legend.key.spacing.y to work
   theme(legend.position = "bottom", 
         legend.direction = "vertical", 
-        legend.title = element_blank()) +
+        legend.title = element_blank(),
+        legend.key.spacing.y = unit(0, "cm")) + 
   labs(x = "Minimum Time to reach Cmax by Chemical (weeks of gestation)", 
        y = "Cumulative Frequency") 
 
-# How many chems reached Cmax in the mother by 1st tri?  (88/103 = ~85%)
-ecdf.data[lifestage == "maternal" & min_tstar < 13, length(unique(dtxsid))]
-#> [1] 88
+# How many chems reached Cmax in the mother by 1st tri?  (64/103 = ~62%)
+ecdf.data[lifestage == "maternal" & min_tstar <= 13, length(unique(dtxsid))]
+#> [1] 64
 
-# 15 chems reached Cmax in the mother in the 2nd-3rd tri 
-# but 13 of these chems reached Cmax in 37th-39th weeks
+# 39 chems reached Cmax in the mother in the 2nd-3rd tri 
+# 38 of these chems reached Cmax in the 33th-40th weeks (17 at the end of term)
+# Benzyl cinnamate was the exception reaching Cmax on the 16th week
 View(ecdf.data[min_tstar > 13 & lifestage == "maternal"])
 
 # Obtaining TK parameters ------------------------------------------------------
@@ -233,6 +242,8 @@ physchem.tb$chnm <- ivive.moe.tb$chnm
 physchem.tb <- physchem.tb[, c("dtxsid", "chnm", parameters)]
 
 # PLOTTING: TK Properties for Chems achieving Cmax in 1st vs 2nd Trimester------
+
+parameters <- c("Clint", "Funbound.plasma", "Fraction_unbound_plasma_fetus", "Pow")
 
 # let's see if chems are distinct toxicokinetically (1st vs 2nd trimester)
 set1 <- ecdf.data[lifestage == "maternal" & min_tstar <= 13, dtxsid]
@@ -268,10 +279,11 @@ ecdf.tk[TK_prop == "Clint" & value == "-Inf", value := -5]
 
 # make the violin plots
 vpp <- ggplot(ecdf.tk, aes(x = TK_prop, y = value, fill = flag)) +
-  geom_violin(alpha = 0.5) + 
+  geom_violin(alpha = 0.5, 
+              linewidth = 0.25) + 
               # draw_quantiles = c(0.5)) +
   geom_point(position = position_jitterdodge(dodge.width = 1),
-             alpha = 0.8,
+             alpha = 0.8, size = 0.75, 
              show.legend = F) +
   # geom_boxplot(position = position_dodge(width = 0.9), 
   #   width=0.1, color="black", alpha=0.5) +
@@ -282,44 +294,46 @@ vpp <- ggplot(ecdf.tk, aes(x = TK_prop, y = value, fill = flag)) +
        y = "Value (log10 units)", 
        fill = "Chemical Sets") +
   my_theme +
-  guides(fill = guide_legend(position = "inside")) +
-  theme(axis.text.x = element_text(angle = 60, vjust = 0.82, hjust = 0.80), 
-        legend.position.inside = c(0.17, 0.85)) +
-  geom_segment(
-               aes(x = x1, xend = x1 + 0.55, y = median.log, yend = median.log),
-               color = "red", linetype = "dashed", linewidth = 1, 
+  guides(fill = guide_legend(override.aes = list(color = "black", linewidth = 0.25), 
+                             position = "inside")) +
+  theme(legend.position.inside = c(0.2, 0.85), 
+        legend.key.size = unit(0.35, "cm"), 
+        legend.key.spacing.y = unit(0.02, "cm")) +
+        # axis.text.x = element_text(angle = 60, vjust = 0.82, hjust = 0.80)) +
+  geom_segment(aes(x = x1, xend = x1 + 0.55, y = median.log, yend = median.log),
+               color = "red", linetype = "dashed", linewidth = 0.75, 
                data = tk.medians)
 vpp 
 
 # put it all together
-fig <- ggdraw() + 
-  draw_plot(cdfpp, x = 0, y = 0.2, width = 0.5, height = 0.7) +
-  draw_plot(vpp, x = 0.5, y = 0.10, width = 0.5, height = 0.8) +
-  draw_plot_label(label = c("A", "B"), size = 15, 
-                  x = c(0, 0.5), y = c(0.90, 0.90))
+fig <- plot_grid(cdfpp, vpp, 
+                 ncol = 2, 
+                 align = "h",
+                 labels = "AUTO", 
+                 label_size = 10)
 
 fig 
 
-ggsave(plot = fig, 
-       units = "in", 
-       dpi = 300, 
-       width = 13.9, height = 8.1, 
-       device = "tiff", 
-       filename = "./figures/300dpi/ecdf-v3.tiff")
+ggsave(plot = fig,
+       units = "mm",
+       dpi = 300,
+       width = 190, height = 100,
+       device = "tiff",
+       filename = "./figures/300dpi/ecdf-v4.tiff")
 
 ggsave(plot = fig, 
-       units = "in", 
+       units = "mm", 
        dpi = 300, 
-       width = 13.9, height = 8.1, 
+       width = 190, height = 100, 
        device = "png", 
-       filename = "./figures/ecdf-v3.png")
+       filename = "./figures/ecdf-v4.png")
 
 # Update RData------------------------------------------------------------------ 
 # Ignore running this section unless you want to reproduce the entire workflow from scratch.
 # Results are stored in "./data/invitrodb_v3_5_deiod_filtered_httk.RData."
 e <- new.env(parent = emptyenv())
 load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', envir = e)
-e$table7 <- table7
+e$table8 <- table8
 e$Cmax.times.m <- Cmax.times.m
 e$ecdf.data <- ecdf.data
 e$physchem.tb <- physchem.tb # save this because we're going to need this for is_Cplasma_protective.R

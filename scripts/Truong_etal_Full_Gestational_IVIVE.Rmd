@@ -40,6 +40,7 @@ rm(list = ls())
 load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', verbose = TRUE)
 
 ```
+
 ### eval = execute.vignette
 Several chunks of code in this vignette have "eval = execute.vignette" and we set execute.chunk to be FALSE, by default. We do this to include all the code that was necessary to produce the figures but was not run when the vignette was built since some of these chunks take a considerable amount of time and the checks on CRAN limit how long we can spend
 building the package. You can still reproduce the end figures knitting the .Rmd file, since all the necessary and intermediate data objects are stored in `./data/invitrodb_v3_5_deiod_filtered_httk.RData`. If you want to rerun the whole workflow on your own, you must rerun all code from top to bottom, either by changing execute.vignette to TRUE or clicking on the "green arrow" in RStudio. 
@@ -111,7 +112,7 @@ knitr::kable(ac50.dt[dsstox_substance_id %in% missing.dtxsids,
 
 ```{r tech-review-chems, eval = execute.vignette, include = FALSE}
 e <- new.env(parent = emptyenv())
-(load('./data/invitrodb_v3_5_deiod_filtered_httk_121024.RData', envir = e))
+(load('./data/old/invitrodb_v3_5_deiod_filtered_httk_toxsubmission.RData', envir = e))
 
 # these (98) chems were used in coauthor/tech review
 # one of these was a PFAS (DTXSID80379721) predicted by Dawson 2021 so should have been 97 
@@ -240,7 +241,7 @@ for(i in 1:nrow(ivive.moe.tb)) {
 
 ## Calculate AEDs by Target and Tissue
 ```{r preg-aeds, eval = execute.vignette}
-tissue.aeds <- list()
+tissue.aeds2 <- list()
 
 # tissues specific for each target 
 tissue_list <- list(DIO1 = c('Cliver', 'Cfliver', 'Cthyroid', 'Cfthyroid', 'Cconceptus'), 
@@ -259,7 +260,7 @@ for (i in names(tissue_list)) {
   df.target[, 2: (length(tissue_list[[i]])+1) ] <- mapply(function(x,y) x/y, ivive.moe.tb[active.chem.ind, ..i], Cmax.tissues[active.chem.ind, tissue_list[[i]]])
   
   df.target$dtxsid <- ivive.moe.tb$dtxsid[active.chem.ind]
-  tissue.aeds[[i]] <- df.target
+  tissue.aeds2[[i]] <- df.target
 }
 
 ```
@@ -314,7 +315,7 @@ tissue.bers[, c(num.cols) := lapply(.SD, signif, digits = 2), .SDcols = num.cols
 
 ```
 
-```{r fig9-plt}
+```{r fig9-plt, eval = execute.vignette}
 min_val <- tissue.bers[min_ber <= 3, min(value), by = enzyme][, min(V1)]
 max_val <- tissue.bers[min_ber <= 3, max(value), by = enzyme][, max(V1)]
 ylims <- c(min_val, max_val)
@@ -334,8 +335,9 @@ for(k in names(tissue.aeds)) {
                         mapping = aes(x = reorder(chnm, -min_ber), 
                                       y = value)) +
     geom_star(aes(starshape = compt, fill = compt, color = compt), 
-               alpha = 0.65, size = 3,
-               show.legend = T) +
+              alpha = 0.65, size = 1.25, # default: 1.5
+              starstroke = 0.25, # default: 0.5
+              show.legend = T) +
     scale_y_continuous(breaks = seq(ylims[1], ylims[2], 1),
                        limits = ylims) +
     scale_starshape_manual(name = "Compartment corresponding to AED \n or Exposure", 
@@ -386,11 +388,13 @@ for(k in names(tissue.aeds)) {
     labs(x = 'Chemical', y = 'Oral AED or Exposure (log10 mg/kg-bw/day)', title = k) +
     theme_bw() +
     theme(legend.position = "none", 
-          plot.title = element_text(size = 18, face = "bold"), 
-          axis.title = element_text(size = 16), 
-          axis.text = element_text(size = 14), 
-          legend.text = element_text(size = 14), 
-          legend.title = element_text(size = 13, hjust = 0.5)) +
+          plot.title = element_text(size = 8, face = "bold"), 
+          plot.margin = unit(c(0.1,0.1,0.1,0.1), "cm"),
+          axis.title = element_text(size = 6), 
+          axis.text.y = element_text(size = 5), 
+          axis.text.x = element_text(size = 6),
+          legend.text = element_text(size = 6), 
+          legend.title = element_text(size = 6, hjust = 0.5))+
     coord_flip()
 }
 
@@ -400,11 +404,12 @@ listgg$DIO3 <- listgg$DIO3 +
   labs(x = '') 
 listgg$DIO1 <- listgg$DIO1 + labs(y = '')
 
-# arrange DIO1 and DIO2 with equal sizes since they have 14 chems each
+# arrange DIO1 and DIO2 with equal sizes since they have ~20 chems each (21 vs 24)
 pcol1 <- plot_grid(listgg$DIO1, listgg$DIO2, 
-                  align = "hv", nrow = 2)
+                  align = "hv", nrow = 2, 
+                  rel_heights = c(1,1.1))
 
-# make DIO3 3x taller than IYD (30 chems vs 3)
+# make DIO3 3x taller than IYD (44 chems vs 4)
 pcol2 <- plot_grid(listgg$IYD, listgg$DIO3, 
                    align = "hv", nrow = 2, 
                    rel_heights = c(1,3))
@@ -417,9 +422,12 @@ prow <- plot_grid(pcol1, pcol2,
 grobs <- ggplotGrob(
   listgg$DIO2 + 
   guides(
-    starshape = guide_legend(ncol = 2, byrow = F), 
-    fill = guide_legend(ncol = 2, byrow = F), 
-    color = guide_legend(ncol = 2, byrow = F),
+    starshape = guide_legend(ncol = 2, byrow = F, 
+                             keyheight = unit(0.25, "cm")), 
+    fill = guide_legend(ncol = 2, byrow = F, 
+                        keyheight = unit(0.25, "cm")), 
+    color = guide_legend(ncol = 2, byrow = F, 
+                         keyheight = unit(0.25, "cm")),
   ) +
   theme(legend.position = "bottom")
   )$grobs
@@ -427,28 +435,28 @@ legend2 <- grobs[[which(sapply(grobs, function(x) x$name) == "guide-box")]]
 
 # add the legend underneath the plots; make it 10% of the height of the combined plots
 fig9 <- plot_grid(prow, legend2, 
-          nrow = 2, rel_heights = c(1,0.1))
+          nrow = 2, rel_heights = c(0.88,0.12))
 
 # ggsave(plot = fig9,
-#        units = "in",
+#        units = "mm",
 #        dpi = 300,
-#        width = 21.33, height = 13,
+#        width = 190, height = 150,
 #        device = "tiff",
-#        filename = "./figures/300dpi/preg_prioritization_by_BER-v4.tiff")
+#        filename = "./figures/300dpi/preg_prioritization_by_BER-v5.2.tiff")
 # 
 # ggsave(plot = fig9,
-#        units = "in",
+#        units = "mm",
 #        dpi = 300,
-#        width = 21.33, height = 13,
+#        width = 190, height = 150,
 #        device = "png",
-#        filename = "./figures/preg_prioritization_by_BER-v4.png")
+#        filename = "./figures/preg_prioritization_by_BER-v5.2.png")
 
 ```
 
 # Comparing IVIVE models based on BER prioritization 
 
 ## Table 7 
-```{r table-7, warning = FALSE}
+```{r table-7, warning = FALSE, eval = execute.vignette}
 targets <- c('DIO1', 'DIO2', 'DIO3', 'IYD')
 
 # DATA WRANGLING
@@ -460,7 +468,7 @@ minber.by.chem <- tissue.bers[!is.na(most_sensitive_tissue),
                        .(chnm, min_ber, most_sensitive_tissue), by = .(enzyme, dtxsid)]
 
 # check if there are multiple most-sensitive tissues per chem in each enzyme group 
-minber.by.chem[, if(.N > 1) .SD, by = .(enzyme, dtxsid)][, length(unique(dtxsid))] #63 chems
+minber.by.chem[, if(.N > 1) .SD, by = .(enzyme, dtxsid)][, length(unique(dtxsid))] #70 chems
 
 # collapse multiple most-sensitive tissues per chem in each enzyme group
 min.ber.reduced <- minber.by.chem[, most_sensitive_compts := paste(most_sensitive_tissue, collapse = ", "), by = .(enzyme, dtxsid)][, .(chnm, min_ber, most_sensitive_compts), by = .(enzyme, dtxsid)]
@@ -497,13 +505,12 @@ setnames(plasma.tissue.bers, old = colnames(plasma.tissue.bers)[3:8],
          new = c('plasma_BER50', 'DIO1_BER', 'DIO2_BER', 'DIO3_BER', 'IYD_BER', 'min_BER'))
 
 plasma.tissue.bers <- plasma.tissue.bers[order(min_BER)]
-# write.xlsx(plasma.tissue.bers, "./tables/Table7_preg_vs_nonpregBERs_v3.xlsx", colnames = T)
 
 ```
 
 ## Figure 10: Understanding and Interpreting Maternal-Fetal BERs
-```{r fig10}
-# merge min BER with plasma BER for each chem with unique row for each row
+```{r fig10, eval = execute.vignette}
+# merge min BER with plasma BER for each chem with unique row for each chem
 # ignoring multiple sensitive tissues
 ber.comp <- merge.data.table(ranked.by.plasma[, c('dtxsid', 'chnm', 'lmoe50')], 
                              min.ber.mat[, -c("chnm")], 
@@ -518,34 +525,36 @@ ber.lims <- c(floor(min_ber), ceiling(max_ber))
 
 # theme for the next 2 figures 
 my_theme <- theme_bw() +
-  theme(axis.title = element_text(size = 14, face = "bold"), 
-        axis.text = element_text(size = 12), 
-        legend.text = element_text(size = 12))
+  theme(axis.title = element_text(size = 8, face = "bold"), 
+        axis.text = element_text(size = 7))
   
 preg.vs.nonpreg.pp <- ggplot(data = ber.comp, aes(x = plasma_BER50, y = min_BER)) +
-  geom_point(alpha = 0.75, size = 3, 
+  geom_point(alpha = 0.75, size = 1, 
              show.legend = T) +
-  geom_abline(slope = 1, linewidth = 1, linetype = 'solid', color = "#666666") +
-  geom_abline(aes(slope = 1, intercept = 1), linetype = 'longdash', color = 'grey', linewidth = 1) + # default linesize = 1
-  geom_abline(aes(slope = 1, intercept = -1), linetype = 'longdash', color = 'grey', linewidth = 1) +
+  geom_abline(slope = 1, linewidth = 0.5, linetype = 'solid', color = "#666666") +
+  geom_abline(aes(slope = 1, intercept = 1), linetype = 'longdash', color = 'grey', linewidth = 0.5) + # default linesize = 1
+  geom_abline(aes(slope = 1, intercept = -1), linetype = 'longdash', color = 'grey', linewidth = 0.5) +
   geom_label_repel(aes(label = chnm),
-                   data = ber.comp[abs(plasma_BER50 - min_BER) > 1 | plasma_BER50 < 0][
-                     ! chnm %in% c("2-Chloro-N-phenylacetamide") # this label is a bit distracting
-                   ],
-                   size = 5,
-                   force = 120) +
+                   data = ber.comp[min_BER < 0][order(min_BER)][1:5],
+                   max.overlaps = 10, 
+                   force = 75, 
+                   size = 2, 
+                   label.padding = 0.1, 
+                   label.size = 0.1, 
+                   label.r = 0.08, 
+                   segment.size = 0.1) +
   my_theme +
-  theme(legend.position = 'bottom', 
-        legend.direction = 'horizontal',
-        legend.title = element_blank()) + 
   scale_x_continuous(breaks = seq(ber.lims[1], ber.lims[2], 1), 
                      limits = ber.lims) +
   scale_y_continuous(breaks = seq(ber.lims[1], ber.lims[2], 1), 
                      limits = ber.lims) +
   labs(x = 'plasma BER using 3compss model', y = 'min BER across DIO/IYD targets and tissues')
 
+# chems with labels 
+labels.for.a <- ber.comp[min_BER < 0][order(min_BER)][1:5, chnm]
+
 # how many chems to the right of y = x?
-ber.comp[plasma_BER50 > min_BER, .N] #65 chems 
+ber.comp[plasma_BER50 > min_BER, .N] #89 chems 
 
 # plot SEEM3 uncertainty
 ivive.moe.tb$uncertainty = log10(ivive.moe.tb$seem3.u95/ivive.moe.tb$seem3)
@@ -559,15 +568,16 @@ max.uncertainty <- max(ber.comp$uncertainty)
 seem3pp <- ggplot(data = ber.comp, 
        mapping = aes(x = min_BER, 
                      y = uncertainty)) +
-  geom_point(size = 3, alpha = 0.8) +
+  geom_point(size = 1, alpha = 0.8) +
   geom_label_repel(aes(label = chnm),
-                   data = subset(ber.comp, min_BER < 0 | uncertainty > 4),
-                   force = 50,
-                   size = 5) +
+                   data = subset(ber.comp, chnm %in% labels.for.a), 
+                   force = 100,
+                   size = 2, 
+                   label.padding = 0.1, 
+                   label.size = 0.1, 
+                   label.r = 0.08, 
+                   segment.size = 0.1) +
   my_theme +
-  theme(legend.position = 'bottom', 
-        legend.direction = 'horizontal',
-        legend.title = element_blank()) + 
   scale_x_continuous(breaks = seq(min.ber.lims[1], min.ber.lims[2], 1), 
                      limits = min.ber.lims) +
   scale_y_continuous(breaks = seq(0, ceiling(max.uncertainty), 1), 
@@ -575,24 +585,24 @@ seem3pp <- ggplot(data = ber.comp,
   labs(x = 'min BER by Chemical', y = TeX(r'($log_{10}ExpoCast_{u95} - log_{10}ExpoCast_{med}$)'))
 
 median(ber.comp$min_BER)
-#> [1] 3.6
+#> [1] 2.9
 
 bers2 <- plot_grid(preg.vs.nonpreg.pp, seem3pp, 
-          labels = "AUTO", label_size = 20)
+          labels = "AUTO", label_size = 10)
 
-# ggsave(plot = bers2, 
-#        units = "in", 
-#        dpi = 300, 
-#        width = 18.53, height = 8.32, 
-#        device = "tiff", 
-#        filename = "./figures/300dpi/BER_uncertainty-v3.tiff")
+# ggsave(plot = bers2,
+#        units = "mm",
+#        dpi = 300,
+#        width = 190, height = 100,
+#        device = "tiff",
+#        filename = "./figures/300dpi/BER_uncertainty-v4.tiff")
 # 
-# ggsave(plot = bers2, 
-#        units = "in", 
-#        dpi = 300, 
-#        width = 18.53, height = 8.32, 
-#        device = "png", 
-#        filename = "./figures/BER_uncertainty-v3.png")
+# ggsave(plot = bers2,
+#        units = "mm",
+#        dpi = 300,
+#        width = 190, height = 100,
+#        device = "png",
+#        filename = "./figures/BER_uncertainty-v4.png")
 
 
 ```
