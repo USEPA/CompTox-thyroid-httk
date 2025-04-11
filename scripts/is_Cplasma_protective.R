@@ -84,6 +84,8 @@ max.diff.m[, max.max_diff := max(max_diff), by = .(dtxsid, chnm)] # max diff by 
 max.diff.m <- max.diff.m[order(max.max_diff)]
 
 # Update RData file with Max Differences i.e. Cftissue/Cplasma -----------------
+# Ignore running this section unless you want to reproduce the entire workflow from scratch.
+# Results are stored in "./data/invitrodb_v3_5_deiod_filtered_httk.RData."
 e <- new.env(parent = emptyenv())
 load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', envir = e)
 e$max.diff <- max.diff
