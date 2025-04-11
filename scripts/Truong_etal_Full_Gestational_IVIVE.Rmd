@@ -537,7 +537,7 @@ preg.vs.nonpreg.pp <- ggplot(data = ber.comp, aes(x = plasma_BER50, y = min_BER)
   geom_label_repel(aes(label = chnm),
                    data = ber.comp[min_BER < 0][order(min_BER)][1:5],
                    max.overlaps = 10, 
-                   force = 75, 
+                   force = 100, 
                    size = 2, 
                    label.padding = 0.1, 
                    label.size = 0.1, 
