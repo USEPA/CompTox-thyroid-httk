@@ -399,7 +399,6 @@ results were saved in the
 ##   physchem.tb
 ##   plasma.tissue.bers
 ##   sel
-##   table7
 ##   table8
 ##   tissue.aeds
 ##   tissue.bers</code></pre>
@@ -739,7 +738,7 @@ AED = \frac{AC_{50}}{CSS_{50}}
 </div>
 <div id="calculate-aeds-by-target-and-tissue" class="section level2">
 <h2>Calculate AEDs by Target and Tissue</h2>
-<div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" tabindex="-1"></a>tissue.aeds2 <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" tabindex="-1"></a>tissue.aeds <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
 <span id="cb19-2"><a href="#cb19-2" tabindex="-1"></a></span>
 <span id="cb19-3"><a href="#cb19-3" tabindex="-1"></a><span class="co"># tissues specific for each target </span></span>
 <span id="cb19-4"><a href="#cb19-4" tabindex="-1"></a>tissue_list <span class="ot">&lt;-</span> <span class="fu">list</span>(<span class="at">DIO1 =</span> <span class="fu">c</span>(<span class="st">&#39;Cliver&#39;</span>, <span class="st">&#39;Cfliver&#39;</span>, <span class="st">&#39;Cthyroid&#39;</span>, <span class="st">&#39;Cfthyroid&#39;</span>, <span class="st">&#39;Cconceptus&#39;</span>), </span>
@@ -758,7 +757,7 @@ AED = \frac{AC_{50}}{CSS_{50}}
 <span id="cb19-17"><a href="#cb19-17" tabindex="-1"></a>  df.target[, <span class="dv">2</span><span class="sc">:</span> (<span class="fu">length</span>(tissue_list[[i]])<span class="sc">+</span><span class="dv">1</span>) ] <span class="ot">&lt;-</span> <span class="fu">mapply</span>(<span class="cf">function</span>(x,y) x<span class="sc">/</span>y, ivive.moe.tb[active.chem.ind, ..i], Cmax.tissues[active.chem.ind, tissue_list[[i]]])</span>
 <span id="cb19-18"><a href="#cb19-18" tabindex="-1"></a>  </span>
 <span id="cb19-19"><a href="#cb19-19" tabindex="-1"></a>  df.target<span class="sc">$</span>dtxsid <span class="ot">&lt;-</span> ivive.moe.tb<span class="sc">$</span>dtxsid[active.chem.ind]</span>
-<span id="cb19-20"><a href="#cb19-20" tabindex="-1"></a>  tissue.aeds2[[i]] <span class="ot">&lt;-</span> df.target</span>
+<span id="cb19-20"><a href="#cb19-20" tabindex="-1"></a>  tissue.aeds[[i]] <span class="ot">&lt;-</span> df.target</span>
 <span id="cb19-21"><a href="#cb19-21" tabindex="-1"></a>}</span></code></pre></div>
 </div>
 <div id="figure-9-priority-chemicals-based-on-maternal-fetal-bers" class="section level2">
@@ -945,8 +944,8 @@ AED = \frac{AC_{50}}{CSS_{50}}
 </div>
 <div id="comparing-ivive-models-based-on-ber-prioritization" class="section level1">
 <h1>Comparing IVIVE models based on BER prioritization</h1>
-<div id="table-7" class="section level2">
-<h2>Table 7</h2>
+<div id="table-8" class="section level2">
+<h2>Table 8</h2>
 <div class="sourceCode" id="cb22"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" tabindex="-1"></a>targets <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&#39;DIO1&#39;</span>, <span class="st">&#39;DIO2&#39;</span>, <span class="st">&#39;DIO3&#39;</span>, <span class="st">&#39;IYD&#39;</span>)</span>
 <span id="cb22-2"><a href="#cb22-2" tabindex="-1"></a></span>
 <span id="cb22-3"><a href="#cb22-3" tabindex="-1"></a><span class="co"># DATA WRANGLING</span></span>
@@ -1025,7 +1024,7 @@ AED = \frac{AC_{50}}{CSS_{50}}
 <span id="cb23-25"><a href="#cb23-25" tabindex="-1"></a>  <span class="fu">geom_label_repel</span>(<span class="fu">aes</span>(<span class="at">label =</span> chnm),</span>
 <span id="cb23-26"><a href="#cb23-26" tabindex="-1"></a>                   <span class="at">data =</span> ber.comp[min_BER <span class="sc">&lt;</span> <span class="dv">0</span>][<span class="fu">order</span>(min_BER)][<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>],</span>
 <span id="cb23-27"><a href="#cb23-27" tabindex="-1"></a>                   <span class="at">max.overlaps =</span> <span class="dv">10</span>, </span>
-<span id="cb23-28"><a href="#cb23-28" tabindex="-1"></a>                   <span class="at">force =</span> <span class="dv">75</span>, </span>
+<span id="cb23-28"><a href="#cb23-28" tabindex="-1"></a>                   <span class="at">force =</span> <span class="dv">100</span>, </span>
 <span id="cb23-29"><a href="#cb23-29" tabindex="-1"></a>                   <span class="at">size =</span> <span class="dv">2</span>, </span>
 <span id="cb23-30"><a href="#cb23-30" tabindex="-1"></a>                   <span class="at">label.padding =</span> <span class="fl">0.1</span>, </span>
 <span id="cb23-31"><a href="#cb23-31" tabindex="-1"></a>                   <span class="at">label.size =</span> <span class="fl">0.1</span>, </span>
@@ -1117,7 +1116,7 @@ AED = \frac{AC_{50}}{CSS_{50}}
 ## 
 ## locale:
 ## [1] LC_COLLATE=English_United States.utf8 
-## [2] LC_CTYPE=en_US.UTF-8                  
+## [2] LC_CTYPE=English_United States.utf8   
 ## [3] LC_MONETARY=English_United States.utf8
 ## [4] LC_NUMERIC=C                          
 ## [5] LC_TIME=English_United States.utf8    

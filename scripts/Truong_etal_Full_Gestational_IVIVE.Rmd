@@ -241,7 +241,7 @@ for(i in 1:nrow(ivive.moe.tb)) {
 
 ## Calculate AEDs by Target and Tissue
 ```{r preg-aeds, eval = execute.vignette}
-tissue.aeds2 <- list()
+tissue.aeds <- list()
 
 # tissues specific for each target 
 tissue_list <- list(DIO1 = c('Cliver', 'Cfliver', 'Cthyroid', 'Cfthyroid', 'Cconceptus'), 
@@ -260,7 +260,7 @@ for (i in names(tissue_list)) {
   df.target[, 2: (length(tissue_list[[i]])+1) ] <- mapply(function(x,y) x/y, ivive.moe.tb[active.chem.ind, ..i], Cmax.tissues[active.chem.ind, tissue_list[[i]]])
   
   df.target$dtxsid <- ivive.moe.tb$dtxsid[active.chem.ind]
-  tissue.aeds2[[i]] <- df.target
+  tissue.aeds[[i]] <- df.target
 }
 
 ```
@@ -455,8 +455,8 @@ fig9 <- plot_grid(prow, legend2,
 
 # Comparing IVIVE models based on BER prioritization 
 
-## Table 7 
-```{r table-7, warning = FALSE, eval = execute.vignette}
+## Table 8
+```{r table-8, warning = FALSE, eval = execute.vignette}
 targets <- c('DIO1', 'DIO2', 'DIO3', 'IYD')
 
 # DATA WRANGLING
