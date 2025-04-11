@@ -4,7 +4,7 @@
 # 
 # @author: Kimberly Truong
 # created: 5/30/24
-# updated: 4/1/25
+# updated: 4/11/25
 # ==============================================================================
 
 rm(list=ls())
@@ -43,6 +43,9 @@ for (i in 1:nrow(ivive.moe.tb)) {
                             track.vars = tissues, 
                             physchem.exclude = FALSE)
 
+  # convert to dataframe for mapply operations below
+  sol.out <- as.data.frame(sol.out)
+  
   # this ignores Inf values after division 
   my.max <- function(x) {
     
@@ -77,35 +80,38 @@ max.diff.m[, ftissue := str_split_i(ftissue, "\\.", 1) ]
 View(max.diff.m[, .SD, by = .(dtxsid, chnm)])
 
 max.diff.m[, max_diff := log10(max_diff)]
-max.diff.m[, max.max_diff := max(max_diff), by = .(dtxsid, chnm)] 
+max.diff.m[, max.max_diff := max(max_diff), by = .(dtxsid, chnm)] # max diff by chemical
 max.diff.m <- max.diff.m[order(max.max_diff)]
 
-# update RData file with max differences
+# Update RData file with Max Differences i.e. Cftissue/Cplasma -----------------
 e <- new.env(parent = emptyenv())
 load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', envir = e)
+e$max.diff <- max.diff
 e$max.diff.m <- max.diff.m
 do.call("save", c(ls(envir = e), list(envir = e, file ='./data/invitrodb_v3_5_deiod_filtered_httk.RData')))
 
 # PLOTTING MAX DIFF FROM CPLASMA -----------------------------------------------
-boundary.chem <- tail(max.diff.m[max.max_diff < 0.5])[6, chnm] #pirimicarb 
+# tissues where DIO enzymes live 
+tissues <- c('Cfliver', 'Cfbrain', 'Cfthyroid', 'Cconceptus', 'Cplasma', 'Cfplasma')
+
+boundary.chem <- tail(max.diff.m[max.max_diff < 0.5])[length(tissues), chnm] #pirimicarb 
 
 min.maxdiff <- max.diff.m[, min(max_diff)]
 max.maxdiff <- max.diff.m[, max(max_diff)]
 ylims <- c(floor(min.maxdiff), ceiling(max.maxdiff)-0.5)
 
 my_theme <- theme_bw() +
-  theme(axis.title = element_text(size = 14, face = "bold"), 
-        axis.text = element_text(size = 12),
-        legend.title = element_text(size = 14), 
-        legend.text = element_text(size = 12), 
+  theme(axis.title = element_text(size = 7, face = "bold"), 
+        legend.title = element_text(size = 6), 
+        legend.text = element_text(size = 6), 
         legend.background = element_blank()) 
 
 Cdiff <- ggplot(max.diff.m, 
        mapping = aes(x = reorder(chnm, -max.max_diff), 
                      y = max_diff)) +
-  geom_point(aes(shape = ftissue, color = ftissue), size = 3, 
-             alpha = 0.7, stroke = 1.5) +
-  geom_hline(yintercept = 0.5, color = 'red', linetype = "longdash", linewidth = 1.2) +
+  geom_point(aes(shape = ftissue, color = ftissue), size = 1.2, 
+             alpha = 0.7, stroke = 0.5) +
+  geom_hline(yintercept = 0.5, color = 'red', linetype = "longdash", linewidth = 0.5) +
   scale_y_continuous(breaks = seq(ylims[1], ylims[2], 1), 
                      limits = ylims) +
   scale_shape_manual(name = "x: Fetal Tissue Concentration", 
@@ -122,16 +128,20 @@ Cdiff <- ggplot(max.diff.m,
                                 'Cfthyroid' = "#0072B2", 
                                 'Cconceptus' = "#009E73", 
                                 'Cfplasma' = "#D55E00")) +
-  annotate("rect", xmin = Inf, xmax =  boundary.chem, 
+  annotate("rect", xmin = Inf, xmax =  boundary.chem,
            ymin = -Inf, ymax = Inf, alpha = 0.2) +
-  annotate("text", x = 89, y = 2.3, label = "Protected by Cplasma", 
-           fontface = "bold", size = 14/.pt) +
-  annotate("text", x = 41, y = 2.3, label = "Cftissue > Cplasma", 
-           fontface = "bold", size = 14/.pt) +
+  annotate("text", x = 92, y = 2.2, label = "Protected by Cplasma",
+           fontface = "bold", size = 6.5/.pt) +
+  annotate("text", x = 41, y = 2.3, label = "Cftissue > Cplasma",
+           fontface = "bold", size = 6.5/.pt) +
   my_theme + 
-  theme(axis.title = element_text(face = "bold"), 
+  theme(axis.title = element_text(face = "bold"),
+        axis.title.y = element_text(margin = unit(c(0,-0.3,0,0.1), "cm")), # move label closer to y-axis, leave small margin on left
+        axis.text.y = element_text(size = 4.5),
+        axis.text.x = element_text(size = 6),
         legend.position = 'bottom', 
-        legend.direction = 'horizontal') + 
+        legend.direction = 'horizontal', 
+        plot.margin = unit(c(0.1,0.1,0.1,0.1), "cm")) +
   labs(x = 'Chemical', y = "log10(x) - log10 Cplasma") +
   coord_flip()
 
@@ -142,10 +152,7 @@ Cdiff <- ggplot(max.diff.m,
 TK.data <- max.diff.m[max_diff == max.max_diff]
 TK.data[, max.max_diff := NULL]
 
-# relative max is achieved in both Cfplasma and Cfliver for Sodium 2-mercaptobenzothiolate (DTXSID1026035)
-TK.data[, if(.N > 1) .SD, by = dtxsid]
-
-# Pirimicarb has diff of 0.5
+# Pirimicarb has diff of 0.49 (based on 2 sigfigs)
 TK.data[, max_diff := signif(max_diff,digits = 2)]
 protective.chems <- TK.data[max_diff <= 0.5, unique(dtxsid)]
 nonprotective.chems <- TK.data[max_diff > 0.5, unique(dtxsid)]
@@ -180,53 +187,53 @@ tk.datm[TK_prop == "Clint" & value == "-Inf", value := -5]
 
 # make the violin plots
 vpp <- ggplot(tk.datm, aes(x = TK_prop, y = value, fill = flag)) +
-  geom_violin(alpha = 0.5) + 
+  geom_violin(alpha = 0.5, 
+              linewidth = 0.25) + 
               # draw_quantiles = c(0.5)) +
   geom_point(aes(x = TK_prop, y = value),
              position = position_jitterdodge(dodge.width = 1), 
-             alpha = 0.8, 
+             alpha = 0.8, size = 0.75,
              show.legend = F) +
   scale_fill_manual(labels = c("Always Protected by Maternal Plasma Concentration", 
                                  "Fetal Tissue Concentration > Maternal Plasma Concentration"), 
                     values = c("#828585", "#DC322F")) +
-  guides(fill = guide_legend(position = "inside")) +
   labs(x = "", y = "Value (log10 units)", fill = "") +
   my_theme + 
-  theme(legend.position.inside = c(0.35, 0.88), 
+  guides(fill = guide_legend(override.aes = list(color = "black", 
+                                                 linewidth = 0.25), 
+                             position = "inside")
+         ) +
+  theme(legend.position.inside = c(0.42, 0.88),
         legend.direction = "vertical", 
-        axis.text.x = element_text(angle = 60, vjust = 0.82, hjust = 0.80)) +
+        legend.key.size = unit(0.35, "cm"), 
+        legend.key.spacing.y = unit(0.02, "cm"),
+        axis.text.x = element_text(size = 6, angle = 60, vjust = 0.82, hjust = 0.80), 
+        axis.text.y = element_text(size = 6)) +
   geom_segment(
     aes(x = x1, xend = x1 + 0.55, y = med.log10, yend = med.log10),
-    color = "#00017D", linetype = "dashed", linewidth = 1, 
+    color = "#00017D", linetype = "dashed", linewidth = 0.75, 
     data = tk.medians)
 
-# put it all together
-# try plot_grid
-# plot_grid(Cdiff, vpp, 
-#           rel_widths = c(1,1), 
-#           rel_heights = c(1, 0.33), 
-#           labels = c("A", "B"), 
-#           ncol = 2, nrow = 1)
+tk.plt <- plot_grid(vpp, NULL,
+               nrow = 2, rel_heights = c(1.5,1))
 
-fig <- ggdraw() + 
-  draw_plot(Cdiff, x = 0, y = 0, width = 0.5, height = 1) +
-  draw_plot(vpp, x = 0.55, y = 0.46, width = 0.45, height = 0.5) +
-  draw_plot_label(label = c("A", "B"), size = 30, 
-                  x = c(0, 0.55), y = c(1, 1))
-
+fig <- plot_grid(Cdiff, NULL, tk.plt,
+                 ncol = 3, rel_widths = c(0.5, 0.025, 0.5),
+                 labels = c("A", "", "B"),
+                 label_size = 10)
 fig
 
-ggsave(plot = fig, 
-       units = "in", 
-       dpi = 300, 
-       width = 18, height = 16.5, 
-       device = "tiff", 
-       filename = "./figures/300dpi/is_Cplasma_protective-v3.tiff")
+ggsave(plot = fig,
+       units = "mm",
+       dpi = 600,
+       width = 190, height = 160,
+       device = "tiff",
+       filename = "./figures/300dpi/is_Cplasma_protective-v4.2.tiff")
 
 ggsave(plot = fig, 
-       units = "in", 
-       dpi = 300, 
-       width = 18, height = 16.5, 
+       units = "mm", 
+       dpi = 600, 
+       width = 190, height = 160, 
        device = "png", 
-       filename = "./figures/is_Cplasma_protective-v3.png")
+       filename = "./figures/is_Cplasma_protective-v4.2.png")
 
