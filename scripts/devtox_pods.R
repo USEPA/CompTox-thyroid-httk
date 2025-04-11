@@ -4,7 +4,7 @@
 # 
 # @author: Kimberly Truong 
 # created: 12/7/23
-# updated: 3/10/2025
+# updated: 4/11/2025
 # ==============================================================================
 
 rm(list=ls())
@@ -47,22 +47,26 @@ pod.lims <- c(floor(pod.min), ceiling(pod.max))
 
 # to standardize themes for both plots 
 my_theme <- theme_bw() +
-  theme(axis.title = element_text(size = 14, face = "bold"), 
-        axis.text = element_text(size = 12), 
-        legend.text = element_text(size = 12))
+  theme(axis.title = element_text(size = 6, face = "bold"),
+        legend.text = element_text(size = 5))
   
 toxval.pp <- ggplot(data = pdata3, aes(x = min_aed, y = pod)) +
-  geom_point(size = 3, alpha = 0.75) + # default size = 1.5 
-  geom_abline(slope = 1, linewidth = 1, linetype = 'solid') +
+  geom_point(size = 1.25, alpha = 0.75) + # default size = 1.5 
+  geom_abline(slope = 1, linewidth = 0.5, linetype = 'solid') +
   geom_abline(aes(slope = 1, intercept = 1), 
-              linetype = 'longdash', color = 'grey', linewidth = 1) + # default linesize = 1
+              linetype = 'longdash', color = 'grey', linewidth = 0.5) + # default linesize = 1
   geom_abline(aes(slope = 1, intercept = -1), 
-              linetype = 'longdash', color = 'grey', linewidth = 1) +
+              linetype = 'longdash', color = 'grey', linewidth = 0.5) +
   geom_label_repel(aes(label = chnm), 
                    data = pdata3[abs(pod - min_aed) > 1],
-                   size = 4, 
-                   force = 65, max.overlaps = 9) +
+                   force = 65, max.overlaps = 9, 
+                   size = 2, 
+                   label.padding = 0.1, 
+                   label.size = 0.1, 
+                   label.r = 0.08, 
+                   segment.size = 0.1) +
   my_theme +
+  theme(axis.text = element_text(size = 6)) +
   scale_x_continuous(breaks = seq(pod.lims[1], pod.lims[2], 1), 
                      limits = pod.lims) +
   scale_y_continuous(breaks = seq(pod.lims[1], pod.lims[2], 1), 
@@ -88,14 +92,15 @@ dio.aeds <- tissue.bers[variable == 'aed' & min_ber <= 3,
 dio.aeds[, min_aed_bytarget := min(value), by = .(dtxsid, enzyme)]
 dio.aeds <- dio.aeds[order(dtxsid)]
 
-# filter down to the min AED for each target for each chemical
+# filter down to the min AED for each target x chemical
 dio.aeds <- dio.aeds[variable == "aed" & value == min_aed_bytarget]
 dio.aeds[, variable := paste0(enzyme, ".minAED")]
 dio.aeds[, enzyme := NULL]
+dio.aeds <- unique(dio.aeds[, .(dtxsid, chnm, variable, compt, value, min_ber)])
 
 # how many priority chems do we get from our workflow?
 dio.aeds[, length(unique(dtxsid))]
-#> [1] 39
+#> [1] 58
 
 priority.chems <- dio.aeds[, unique(dtxsid)]
 
@@ -153,7 +158,7 @@ toxcast.pods.m[, value := log10(value)]
 toxcast.pods.m[variable == "aed50", variable := "ToxCast.aed50"]
 toxcast.pods.m[variable == "aed95", variable := "ToxCast.aed95"]
 
-pods.data <- rbind(dio.aeds[, -c("min_aed_bytarget")], 
+pods.data <- rbind(dio.aeds, 
                    toxcast.pods.m, 
                    fill = T) # fill = T will add "NA" to min_ber for ToxCast rows 
 
@@ -175,7 +180,7 @@ dxp <- ggplot(data = pods.data[variable != "ToxCast.aed50"],
   geom_point(aes(shape = variable, 
                  color = variable, 
                  alpha = variable), 
-             size = 3, 
+             size = 1, 
              show.legend = T) +
   scale_alpha_manual(breaks = pod.breaks, 
                      labels = pod.labels, 
@@ -203,10 +208,17 @@ dxp <- ggplot(data = pods.data[variable != "ToxCast.aed50"],
                                 "ToxCast.aed95" = "#9E9E9E")) +
   my_theme +
   theme(legend.position = 'bottom', 
-        legend.title = element_blank()) + 
-  guides(color = guide_legend(nrow = 3, ncol = 2, byrow = F), 
-         shape = guide_legend(nrow = 3, ncol = 2, byrow = F), 
-         alpha = guide_legend(nrow = 3, ncol = 2, byrow = F)) +
+        legend.title = element_blank(),
+        # legend.key = element_rect(color = "black"),
+        legend.key.size = unit(0.35, "cm"),
+        legend.key.spacing.y = unit(0.05, "cm"),
+        legend.margin = margin(t = 0, r = 0, b = 0, l = 0),
+        axis.title.y = element_text(margin = unit(c(0,-0.3,0,0.1), "cm")), 
+        axis.text.y = element_text(size = 4.5), 
+        axis.text.x = element_text(size = 6)) + 
+  guides(color = guide_legend(nrow = 3, ncol = 2, byrow = T), 
+         shape = guide_legend(nrow = 3, ncol = 2, byrow = T), 
+         alpha = guide_legend(nrow = 3, ncol = 2, byrow = T)) +
   labs(x = 'Chemical', y = 'Oral AED (log10 mg/kg-bw/day)') +
   coord_flip()
 
@@ -218,26 +230,26 @@ bioactive.pods <- dxp + geom_segment(data = toxcast.pods.httk,
                                   y = toxcast.pods.httk$aed95, 
                                   xend = toxcast.pods.httk$chnm, 
                                   yend = toxcast.pods.httk$aed50), 
-                              color = "#9E9E9E", linewidth = 1)
+                              color = "#9E9E9E", linewidth = 0.5)
 
 # put it altogether in one figure
 pods.fig <- plot_grid(toxval.pp, bioactive.pods, 
-          nrow = 1, ncol = 2, 
-          align = "h", 
-          labels = c("A", "B"), 
-          label_size = 20)
+                      ncol = 2, rel_widths = c(1,1), 
+                      align = "h", 
+                      labels = c("A", "B"), 
+                      label_size = 10)
+
+# ggsave(plot = pods.fig, 
+#        units = "in", 
+#        dpi = 300, 
+#        width = 18.53, height = 8.32, 
+#        device = "tiff", 
+#        filename = "./figures/300dpi/bioactivity_pods-v3.tiff")
 
 ggsave(plot = pods.fig, 
-       units = "in", 
+       units = "mm", 
        dpi = 300, 
-       width = 18.53, height = 8.32, 
-       device = "tiff", 
-       filename = "./figures/300dpi/bioactivity_pods-v3.tiff")
-
-ggsave(plot = pods.fig, 
-       units = "in", 
-       dpi = 300, 
-       width = 18.53, height = 8.32, 
+       width = 190, height = 120, 
        device = "png", 
-       filename = "./figures/bioactivity_pods-v3.png")
+       filename = "./figures/bioactivity_pods-v4.2.png")
 
