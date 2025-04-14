@@ -4,7 +4,7 @@
 # 
 # @author: Kimberly Truong 
 # created: 12/7/23
-# updated: 4/11/2025
+# updated: 4/13/2025
 # ==============================================================================
 
 rm(list=ls())
@@ -43,7 +43,7 @@ pdata3[, length(unique(dtxsid))]
 
 pod.min <- min(pdata3$min_aed, pdata3$pod)
 pod.max <- max(pdata3$min_aed, pdata3$pod)
-pod.lims <- c(floor(pod.min), ceiling(pod.max))
+pod.lims <- c(floor(pod.min)+0.5, ceiling(pod.max))
 
 # to standardize themes for both plots 
 my_theme <- theme_bw() +
@@ -57,19 +57,19 @@ toxval.pp <- ggplot(data = pdata3, aes(x = min_aed, y = pod)) +
               linetype = 'longdash', color = 'grey', linewidth = 0.5) + # default linesize = 1
   geom_abline(aes(slope = 1, intercept = -1), 
               linetype = 'longdash', color = 'grey', linewidth = 0.5) +
-  geom_label_repel(aes(label = chnm), 
-                   data = pdata3[abs(pod - min_aed) > 1],
-                   force = 65, max.overlaps = 9, 
-                   size = 2, 
-                   label.padding = 0.1, 
-                   label.size = 0.1, 
-                   label.r = 0.08, 
-                   segment.size = 0.1) +
+  # geom_label_repel(aes(label = chnm), 
+  #                  data = pdata3[abs(pod - min_aed) > 1],
+  #                  force = 65, max.overlaps = 9, 
+  #                  size = 2, 
+  #                  label.padding = 0.1, 
+  #                  label.size = 0.1, 
+  #                  label.r = 0.08, 
+  #                  segment.size = 0.1) +
   my_theme +
   theme(axis.text = element_text(size = 6)) +
-  scale_x_continuous(breaks = seq(pod.lims[1], pod.lims[2], 1), 
-                     limits = pod.lims) +
-  scale_y_continuous(breaks = seq(pod.lims[1], pod.lims[2], 1), 
+  scale_x_continuous(breaks = seq(-3, pod.lims[2], 1), 
+                     limits = pod.lims) + # axis goes from -3.5 to 3; this trims extra white space where there is no data
+  scale_y_continuous(breaks = seq(-3, pod.lims[2], 1), 
                      limits = pod.lims) +
   labs(x = 'min DIO/IYD-bioactivity-based AED (log10 mg/kg/day)', 
        y = 'ToxVal POD (log10 mg/kg/day)')
@@ -80,6 +80,7 @@ pdata3 %>%
   select(dtxsid, chnm) %>% print()
 
 chems.to.investigate <- pdata3[min_aed + 1 < pod, dtxsid]
+
 # print source(s) underlying ToxValDB pod 
 toxval.studies <- toxval %>% filter(dtxsid %in% chems.to.investigate) %>% 
   select(name, studies, pod_10, pod_hra, pod_hra_source, pod) %>% print()
@@ -146,6 +147,11 @@ toxcast.pods.httk[, `:=` (aed50 = lowerbd.ac50_uM/mc.css50,
                           aed95 = lowerbd.ac50_uM/mc.css95)]
 setnames(toxcast.pods.httk, old = "dsstox_substance_id", new = "dtxsid")
 
+# Prepare for Plotting ---------------------------------------------------------
+# convert to log10 scale
+toxcast.pods.httk[, c("aed50", "aed95") := lapply(.SD, log10), 
+                  .SDcols = c("aed50", "aed95")]
+
 # melt the data for ggplot
 toxcast.pods.m <- melt.data.table(toxcast.pods.httk, 
                                   id.vars = c("dtxsid", "chnm"),
@@ -153,34 +159,69 @@ toxcast.pods.m <- melt.data.table(toxcast.pods.httk,
                                   variable.name = "variable", 
                                   value.name = "value")
 
-# convert back to log10 scale
-toxcast.pods.m[, value := log10(value)]
 toxcast.pods.m[variable == "aed50", variable := "ToxCast.aed50"]
 toxcast.pods.m[variable == "aed95", variable := "ToxCast.aed95"]
 
-pods.data <- rbind(dio.aeds, 
-                   toxcast.pods.m, 
-                   fill = T) # fill = T will add "NA" to min_ber for ToxCast rows 
+pods.m <- rbind(dio.aeds, toxcast.pods.m, 
+                fill = T) # fill = T will add "NA" to min_ber for ToxCast rows 
 
-# order by ToxCast AED95 i.e. the smallest bioactivity-related POD
+# order chems (on y-axis) by ToxCast AED95 i.e. the smallest bioactivity-related POD 
 chnm.order <- toxcast.pods.httk[order(aed95), chnm]
-pods.data$chnm <- factor(pods.data$chnm, levels = chnm.order)
+pods.m$chnm <- factor(pods.m$chnm, levels = chnm.order)
 
-pod.breaks <- c(paste0(targets, ".minAED"), paste0("ToxCast.aed", c("50", "95")))
+# which chems to label in ToxVal fig?
+invitro.pods <- merge.data.table(dio.aeds, 
+                                 toxcast.pods.httk[, .(dtxsid, chnm, aed50, aed95)], 
+                                 by = c("dtxsid", "chnm"),
+                                 all.x = TRUE)
+setnames(invitro.pods, old = c("aed50", "aed95"), new = c("ToxCast.aed50", "ToxCast.aed95"))
+
+invitro.pods[, dio.impact := ToxCast.aed95 - value]
+invitro.pods <- invitro.pods[order(-dio.impact)]
+
+# find chems with ToxVal POD < DIO AED (below the diagonal)
+pdata3[, diff := min_aed - pod]
+
+# these chems were roughly chosen from a combination of prioritization metrics
+# as well as evidence from the literature
+# others were picked out based on discussion findings
+chems.to.label <- c(invitro.pods[dio.impact > 1 | min_ber < 0, unique(chnm)], 
+                    pdata3[diff > 1, unique(chnm)], 
+                    "alpha-Amyl cinnamaldehyde", "Benzyl cinnamate", 
+                    pdata3[grepl("[Tt]etracycline", pdata3$chnm), chnm], 
+                    "Pirimicarb", "Pirimiphos-methyl", "Fenthion", # AChE inhibitors
+                    "Fluazinam") 
+
+# add corresponding labels for ToxValDB figure 
+toxval.pp <- toxval.pp + geom_label_repel(aes(label = chnm), 
+                                          data = pdata3[chnm %in% chems.to.label | diff > 1],
+                                          force = 160, 
+                                          max.overlaps = Inf, # always show all labels
+                                          size = 2, 
+                                          label.padding = 0.1, 
+                                          label.size = 0.1, 
+                                          label.r = 0.08,
+                                          segment.size = 0.2, 
+                                          segment.curvature = 0.1,
+                                          segment.ncp = 3,
+                                          segment.angle = 20,
+                                          min.segment.length = 0) # always draw segments
+  
+pod.breaks <- c(paste0(targets, ".minAED"), "ToxCast.aed95")
 pod.labels <- c("DIO1 min AED", 
                 "DIO2 min AED", 
                 "DIO3 min AED",
                 "IYD min AED", 
-                TeX("ToxCast 5%-ile $POD_{50}$"), 
+                # TeX("ToxCast 5%-ile $POD_{50}$"), 
                 TeX("ToxCast 5%-ile $POD_{95}$"))
 
-dxp <- ggplot(data = pods.data[variable != "ToxCast.aed50"], 
+dxp <- ggplot(data = pods.m[variable != "ToxCast.aed50"], 
        mapping = aes(x = chnm, 
                      y = value)) +
   geom_point(aes(shape = variable, 
                  color = variable, 
                  alpha = variable), 
-             size = 1, 
+             size = 1, stroke = 0.25, 
              show.legend = T) +
   scale_alpha_manual(breaks = pod.breaks, 
                      labels = pod.labels, 
@@ -188,7 +229,7 @@ dxp <- ggplot(data = pods.data[variable != "ToxCast.aed50"],
                                 "DIO2.minAED" = 0.8,
                                 "DIO3.minAED" = 0.8, 
                                 "IYD.minAED" = 0.8, 
-                                "ToxCast.aed50" = 1, 
+                                # "ToxCast.aed50" = 0.8, 
                                 "ToxCast.aed95" = 1)) +
   scale_shape_manual(breaks = pod.breaks, 
                      labels = pod.labels,  
@@ -196,15 +237,15 @@ dxp <- ggplot(data = pods.data[variable != "ToxCast.aed50"],
                                 "DIO2.minAED" = 17, 
                                 "DIO3.minAED" = 17, 
                                 "IYD.minAED" = 17, 
-                                "ToxCast.aed50" = 19, 
+                                # "ToxCast.aed50" = 19, 
                                 "ToxCast.aed95" = 19)) +
   scale_color_manual(breaks = pod.breaks, 
-                       labels = pod.labels, 
+                     labels = pod.labels, 
                      values = c("DIO1.minAED" = "#56B4E9", 
                                 "DIO2.minAED" = "#009E73", 
                                 "DIO3.minAED" = "#E69F00", 
                                 "IYD.minAED" = "#F0E442", 
-                                "ToxCast.aed50" = "#9E9E9E", 
+                                # "ToxCast.aed50" = "#9E9E9E", 
                                 "ToxCast.aed95" = "#9E9E9E")) +
   my_theme +
   theme(legend.position = 'bottom', 
@@ -222,34 +263,35 @@ dxp <- ggplot(data = pods.data[variable != "ToxCast.aed50"],
   labs(x = 'Chemical', y = 'Oral AED (log10 mg/kg-bw/day)') +
   coord_flip()
 
-toxcast.pods.httk[, c("aed50", "aed95") := lapply(.SD, log10), 
-                  .SDcols = c("aed50", "aed95")]
-
 bioactive.pods <- dxp + geom_segment(data = toxcast.pods.httk, 
                               aes(x = toxcast.pods.httk$chnm, 
                                   y = toxcast.pods.httk$aed95, 
                                   xend = toxcast.pods.httk$chnm, 
                                   yend = toxcast.pods.httk$aed50), 
-                              color = "#9E9E9E", linewidth = 0.5)
+                              color = "#9E9E9E", alpha = 1, linewidth = 0.5)
+
+square_a <- plot_grid(toxval.pp, NULL, 
+                      nrow = 2, 
+                      rel_heights = c(7,1))
 
 # put it altogether in one figure
-pods.fig <- plot_grid(toxval.pp, bioactive.pods, 
-                      ncol = 2, rel_widths = c(1,1), 
-                      align = "h", 
+pods.fig <- plot_grid(square_a, bioactive.pods, 
+                      ncol = 2, rel_widths = c(1,1),
+                      # align = "h", 
                       labels = c("A", "B"), 
                       label_size = 10)
 
-# ggsave(plot = pods.fig, 
-#        units = "in", 
-#        dpi = 300, 
-#        width = 18.53, height = 8.32, 
-#        device = "tiff", 
-#        filename = "./figures/300dpi/bioactivity_pods-v3.tiff")
+ggsave(plot = pods.fig,
+       units = "mm",
+       dpi = 300,
+       width = 190, height = 120,
+       device = "tiff",
+       filename = "./figures/300dpi/bioactivity_pods-v4-3.tiff")
 
 ggsave(plot = pods.fig, 
        units = "mm", 
        dpi = 300, 
        width = 190, height = 120, 
        device = "png", 
-       filename = "./figures/bioactivity_pods-v4.2.png")
+       filename = "./figures/bioactivity_pods-v4-3.png")
 
