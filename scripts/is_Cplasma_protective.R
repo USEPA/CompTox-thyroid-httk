@@ -93,6 +93,7 @@ e$max.diff.m <- max.diff.m
 do.call("save", c(ls(envir = e), list(envir = e, file ='./data/invitrodb_v3_5_deiod_filtered_httk.RData')))
 
 # PLOTTING MAX DIFF FROM CPLASMA -----------------------------------------------
+
 # tissues where DIO enzymes live 
 tissues <- c('Cfliver', 'Cfbrain', 'Cfthyroid', 'Cconceptus', 'Cplasma', 'Cfplasma')
 
@@ -212,7 +213,7 @@ vpp <- ggplot(tk.datm, aes(x = TK_prop, y = value, fill = flag)) +
         axis.text.x = element_text(size = 6, angle = 60, vjust = 0.82, hjust = 0.80), 
         axis.text.y = element_text(size = 6)) +
   geom_segment(
-    aes(x = x1, xend = x1 + 0.55, y = med.log10, yend = med.log10),
+    aes(x = x1, xend = x1 + 0.5, y = med.log10, yend = med.log10),
     color = "#00017D", linetype = "dashed", linewidth = 0.75, 
     data = tk.medians)
 
@@ -228,14 +229,14 @@ fig
 ggsave(plot = fig,
        units = "mm",
        dpi = 600,
-       width = 190, height = 160,
+       width = 190, height = 170,
        device = "tiff",
-       filename = "./figures/300dpi/is_Cplasma_protective-v4.2.tiff")
+       filename = "./figures/300dpi/is_Cplasma_protective-v4-2.tiff")
 
 ggsave(plot = fig, 
        units = "mm", 
        dpi = 600, 
-       width = 190, height = 160, 
+       width = 190, height = 170, 
        device = "png", 
-       filename = "./figures/is_Cplasma_protective-v4.2.png")
+       filename = "./figures/is_Cplasma_protective-v4-2.png")
 
