@@ -475,7 +475,7 @@ min.ber.reduced <- minber.by.chem[, most_sensitive_compts := paste(most_sensitiv
 min.ber.reduced <- unique(min.ber.reduced)
 
 # min BER matrix
-min.ber.mat <- dcast(min.ber.reduced[, 1:4], 
+min.ber.mat <- data.table::dcast(min.ber.reduced[, 1:4], 
                      dtxsid + chnm ~ enzyme, value.var = c('min_ber'))
 min.ber.mat[, min_across_enzyme := pmin(DIO1, DIO2, DIO3, IYD, na.rm = T)]
 min.ber.mat <- min.ber.mat[order(min_across_enzyme)]
@@ -523,6 +523,9 @@ max_ber <- max(ber.comp[, c('plasma_BER50', 'min_BER')], na.rm = T)
 min_ber <- min(ber.comp[, c('plasma_BER50', 'min_BER')], na.rm = T)
 ber.lims <- c(floor(min_ber), ceiling(max_ber))
 
+# chems with labels 
+chem.labels <- ber.comp[min_BER < 0][order(min_BER)][1:6, chnm]
+
 # theme for the next 2 figures 
 my_theme <- theme_bw() +
   theme(axis.title = element_text(size = 8, face = "bold"), 
@@ -535,23 +538,21 @@ preg.vs.nonpreg.pp <- ggplot(data = ber.comp, aes(x = plasma_BER50, y = min_BER)
   geom_abline(aes(slope = 1, intercept = 1), linetype = 'longdash', color = 'grey', linewidth = 0.5) + # default linesize = 1
   geom_abline(aes(slope = 1, intercept = -1), linetype = 'longdash', color = 'grey', linewidth = 0.5) +
   geom_label_repel(aes(label = chnm),
-                   data = ber.comp[min_BER < 0][order(min_BER)][1:5],
-                   max.overlaps = 10, 
-                   force = 100, 
+                   data = ber.comp[chnm %in% chem.labels],
+                   max.overlaps = Inf, 
+                   force = 50, 
                    size = 2, 
                    label.padding = 0.1, 
                    label.size = 0.1, 
                    label.r = 0.08, 
-                   segment.size = 0.1) +
+                   segment.size = 0.2, 
+                   min.segment.length = 0) +
   my_theme +
   scale_x_continuous(breaks = seq(ber.lims[1], ber.lims[2], 1), 
                      limits = ber.lims) +
   scale_y_continuous(breaks = seq(ber.lims[1], ber.lims[2], 1), 
                      limits = ber.lims) +
   labs(x = 'plasma BER using 3compss model', y = 'min BER across DIO/IYD targets and tissues')
-
-# chems with labels 
-labels.for.a <- ber.comp[min_BER < 0][order(min_BER)][1:5, chnm]
 
 # how many chems to the right of y = x?
 ber.comp[plasma_BER50 > min_BER, .N] #89 chems 
@@ -570,13 +571,15 @@ seem3pp <- ggplot(data = ber.comp,
                      y = uncertainty)) +
   geom_point(size = 1, alpha = 0.8) +
   geom_label_repel(aes(label = chnm),
-                   data = subset(ber.comp, chnm %in% labels.for.a), 
-                   force = 100,
+                   data = subset(ber.comp, chnm %in% chem.labels), 
+                   max.overlaps = Inf, 
+                   force = 75,
                    size = 2, 
                    label.padding = 0.1, 
                    label.size = 0.1, 
                    label.r = 0.08, 
-                   segment.size = 0.1) +
+                   segment.size = 0.2, 
+                   min.segment.length = 0) +
   my_theme +
   scale_x_continuous(breaks = seq(min.ber.lims[1], min.ber.lims[2], 1), 
                      limits = min.ber.lims) +

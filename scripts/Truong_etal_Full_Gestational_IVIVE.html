@@ -12,7 +12,7 @@
 
 <meta name="author" content="Kimberly T.Truong, John F. Wambaugh, Dustin F. Kapraun, Sarah E. Davidson-Fritz, Stephanie Eytcheson, Richard Judson, Katie Paul-Friedman" />
 
-<meta name="date" content="2025-04-11" />
+<meta name="date" content="2025-04-14" />
 
 <title>Truong et al. (2025): Using Thyroid-Related Bioactivity Data for Full Human Gestational IVIVE</title>
 
@@ -343,7 +343,7 @@ Bioactivity Data for Full Human Gestational IVIVE</h1>
 <h4 class="author">Kimberly T.Truong, John F. Wambaugh, Dustin F.
 Kapraun, Sarah E. Davidson-Fritz, Stephanie Eytcheson, Richard Judson,
 Katie Paul-Friedman</h4>
-<h4 class="date">2025-04-11</h4>
+<h4 class="date">2025-04-14</h4>
 
 
 
@@ -964,7 +964,7 @@ AED = \frac{AC_{50}}{CSS_{50}}
 <span id="cb22-16"><a href="#cb22-16" tabindex="-1"></a>min.ber.reduced <span class="ot">&lt;-</span> <span class="fu">unique</span>(min.ber.reduced)</span>
 <span id="cb22-17"><a href="#cb22-17" tabindex="-1"></a></span>
 <span id="cb22-18"><a href="#cb22-18" tabindex="-1"></a><span class="co"># min BER matrix</span></span>
-<span id="cb22-19"><a href="#cb22-19" tabindex="-1"></a>min.ber.mat <span class="ot">&lt;-</span> <span class="fu">dcast</span>(min.ber.reduced[, <span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>], </span>
+<span id="cb22-19"><a href="#cb22-19" tabindex="-1"></a>min.ber.mat <span class="ot">&lt;-</span> data.table<span class="sc">::</span><span class="fu">dcast</span>(min.ber.reduced[, <span class="dv">1</span><span class="sc">:</span><span class="dv">4</span>], </span>
 <span id="cb22-20"><a href="#cb22-20" tabindex="-1"></a>                     dtxsid <span class="sc">+</span> chnm <span class="sc">~</span> enzyme, <span class="at">value.var =</span> <span class="fu">c</span>(<span class="st">&#39;min_ber&#39;</span>))</span>
 <span id="cb22-21"><a href="#cb22-21" tabindex="-1"></a>min.ber.mat[, min_across_enzyme <span class="sc">:=</span> <span class="fu">pmin</span>(DIO1, DIO2, DIO3, IYD, <span class="at">na.rm =</span> T)]</span>
 <span id="cb22-22"><a href="#cb22-22" tabindex="-1"></a>min.ber.mat <span class="ot">&lt;-</span> min.ber.mat[<span class="fu">order</span>(min_across_enzyme)]</span>
@@ -1010,86 +1010,89 @@ AED = \frac{AC_{50}}{CSS_{50}}
 <span id="cb23-11"><a href="#cb23-11" tabindex="-1"></a>min_ber <span class="ot">&lt;-</span> <span class="fu">min</span>(ber.comp[, <span class="fu">c</span>(<span class="st">&#39;plasma_BER50&#39;</span>, <span class="st">&#39;min_BER&#39;</span>)], <span class="at">na.rm =</span> T)</span>
 <span id="cb23-12"><a href="#cb23-12" tabindex="-1"></a>ber.lims <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">floor</span>(min_ber), <span class="fu">ceiling</span>(max_ber))</span>
 <span id="cb23-13"><a href="#cb23-13" tabindex="-1"></a></span>
-<span id="cb23-14"><a href="#cb23-14" tabindex="-1"></a><span class="co"># theme for the next 2 figures </span></span>
-<span id="cb23-15"><a href="#cb23-15" tabindex="-1"></a>my_theme <span class="ot">&lt;-</span> <span class="fu">theme_bw</span>() <span class="sc">+</span></span>
-<span id="cb23-16"><a href="#cb23-16" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">axis.title =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">8</span>, <span class="at">face =</span> <span class="st">&quot;bold&quot;</span>), </span>
-<span id="cb23-17"><a href="#cb23-17" tabindex="-1"></a>        <span class="at">axis.text =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">7</span>))</span>
-<span id="cb23-18"><a href="#cb23-18" tabindex="-1"></a>  </span>
-<span id="cb23-19"><a href="#cb23-19" tabindex="-1"></a>preg.vs.nonpreg.pp <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(<span class="at">data =</span> ber.comp, <span class="fu">aes</span>(<span class="at">x =</span> plasma_BER50, <span class="at">y =</span> min_BER)) <span class="sc">+</span></span>
-<span id="cb23-20"><a href="#cb23-20" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">alpha =</span> <span class="fl">0.75</span>, <span class="at">size =</span> <span class="dv">1</span>, </span>
-<span id="cb23-21"><a href="#cb23-21" tabindex="-1"></a>             <span class="at">show.legend =</span> T) <span class="sc">+</span></span>
-<span id="cb23-22"><a href="#cb23-22" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">slope =</span> <span class="dv">1</span>, <span class="at">linewidth =</span> <span class="fl">0.5</span>, <span class="at">linetype =</span> <span class="st">&#39;solid&#39;</span>, <span class="at">color =</span> <span class="st">&quot;#666666&quot;</span>) <span class="sc">+</span></span>
-<span id="cb23-23"><a href="#cb23-23" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="fu">aes</span>(<span class="at">slope =</span> <span class="dv">1</span>, <span class="at">intercept =</span> <span class="dv">1</span>), <span class="at">linetype =</span> <span class="st">&#39;longdash&#39;</span>, <span class="at">color =</span> <span class="st">&#39;grey&#39;</span>, <span class="at">linewidth =</span> <span class="fl">0.5</span>) <span class="sc">+</span> <span class="co"># default linesize = 1</span></span>
-<span id="cb23-24"><a href="#cb23-24" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="fu">aes</span>(<span class="at">slope =</span> <span class="dv">1</span>, <span class="at">intercept =</span> <span class="sc">-</span><span class="dv">1</span>), <span class="at">linetype =</span> <span class="st">&#39;longdash&#39;</span>, <span class="at">color =</span> <span class="st">&#39;grey&#39;</span>, <span class="at">linewidth =</span> <span class="fl">0.5</span>) <span class="sc">+</span></span>
-<span id="cb23-25"><a href="#cb23-25" tabindex="-1"></a>  <span class="fu">geom_label_repel</span>(<span class="fu">aes</span>(<span class="at">label =</span> chnm),</span>
-<span id="cb23-26"><a href="#cb23-26" tabindex="-1"></a>                   <span class="at">data =</span> ber.comp[min_BER <span class="sc">&lt;</span> <span class="dv">0</span>][<span class="fu">order</span>(min_BER)][<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>],</span>
-<span id="cb23-27"><a href="#cb23-27" tabindex="-1"></a>                   <span class="at">max.overlaps =</span> <span class="dv">10</span>, </span>
-<span id="cb23-28"><a href="#cb23-28" tabindex="-1"></a>                   <span class="at">force =</span> <span class="dv">100</span>, </span>
-<span id="cb23-29"><a href="#cb23-29" tabindex="-1"></a>                   <span class="at">size =</span> <span class="dv">2</span>, </span>
-<span id="cb23-30"><a href="#cb23-30" tabindex="-1"></a>                   <span class="at">label.padding =</span> <span class="fl">0.1</span>, </span>
-<span id="cb23-31"><a href="#cb23-31" tabindex="-1"></a>                   <span class="at">label.size =</span> <span class="fl">0.1</span>, </span>
-<span id="cb23-32"><a href="#cb23-32" tabindex="-1"></a>                   <span class="at">label.r =</span> <span class="fl">0.08</span>, </span>
-<span id="cb23-33"><a href="#cb23-33" tabindex="-1"></a>                   <span class="at">segment.size =</span> <span class="fl">0.1</span>) <span class="sc">+</span></span>
-<span id="cb23-34"><a href="#cb23-34" tabindex="-1"></a>  my_theme <span class="sc">+</span></span>
-<span id="cb23-35"><a href="#cb23-35" tabindex="-1"></a>  <span class="fu">scale_x_continuous</span>(<span class="at">breaks =</span> <span class="fu">seq</span>(ber.lims[<span class="dv">1</span>], ber.lims[<span class="dv">2</span>], <span class="dv">1</span>), </span>
-<span id="cb23-36"><a href="#cb23-36" tabindex="-1"></a>                     <span class="at">limits =</span> ber.lims) <span class="sc">+</span></span>
-<span id="cb23-37"><a href="#cb23-37" tabindex="-1"></a>  <span class="fu">scale_y_continuous</span>(<span class="at">breaks =</span> <span class="fu">seq</span>(ber.lims[<span class="dv">1</span>], ber.lims[<span class="dv">2</span>], <span class="dv">1</span>), </span>
-<span id="cb23-38"><a href="#cb23-38" tabindex="-1"></a>                     <span class="at">limits =</span> ber.lims) <span class="sc">+</span></span>
-<span id="cb23-39"><a href="#cb23-39" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">&#39;plasma BER using 3compss model&#39;</span>, <span class="at">y =</span> <span class="st">&#39;min BER across DIO/IYD targets and tissues&#39;</span>)</span>
-<span id="cb23-40"><a href="#cb23-40" tabindex="-1"></a></span>
-<span id="cb23-41"><a href="#cb23-41" tabindex="-1"></a><span class="co"># chems with labels </span></span>
-<span id="cb23-42"><a href="#cb23-42" tabindex="-1"></a>labels.for.a <span class="ot">&lt;-</span> ber.comp[min_BER <span class="sc">&lt;</span> <span class="dv">0</span>][<span class="fu">order</span>(min_BER)][<span class="dv">1</span><span class="sc">:</span><span class="dv">5</span>, chnm]</span>
-<span id="cb23-43"><a href="#cb23-43" tabindex="-1"></a></span>
-<span id="cb23-44"><a href="#cb23-44" tabindex="-1"></a><span class="co"># how many chems to the right of y = x?</span></span>
-<span id="cb23-45"><a href="#cb23-45" tabindex="-1"></a>ber.comp[plasma_BER50 <span class="sc">&gt;</span> min_BER, .N] <span class="co">#89 chems </span></span>
-<span id="cb23-46"><a href="#cb23-46" tabindex="-1"></a></span>
-<span id="cb23-47"><a href="#cb23-47" tabindex="-1"></a><span class="co"># plot SEEM3 uncertainty</span></span>
-<span id="cb23-48"><a href="#cb23-48" tabindex="-1"></a>ivive.moe.tb<span class="sc">$</span>uncertainty <span class="ot">=</span> <span class="fu">log10</span>(ivive.moe.tb<span class="sc">$</span>seem3.u95<span class="sc">/</span>ivive.moe.tb<span class="sc">$</span>seem3)</span>
-<span id="cb23-49"><a href="#cb23-49" tabindex="-1"></a>ber.comp<span class="sc">$</span>uncertainty <span class="ot">&lt;-</span> ivive.moe.tb<span class="sc">$</span>uncertainty[<span class="fu">match</span>(ber.comp<span class="sc">$</span>dtxsid, ivive.moe.tb<span class="sc">$</span>dtxsid)]</span>
-<span id="cb23-50"><a href="#cb23-50" tabindex="-1"></a></span>
-<span id="cb23-51"><a href="#cb23-51" tabindex="-1"></a>min.min.ber <span class="ot">&lt;-</span> <span class="fu">min</span>(ber.comp<span class="sc">$</span>min_BER)</span>
-<span id="cb23-52"><a href="#cb23-52" tabindex="-1"></a>max.min.ber <span class="ot">&lt;-</span> <span class="fu">max</span>(ber.comp<span class="sc">$</span>min_BER)</span>
-<span id="cb23-53"><a href="#cb23-53" tabindex="-1"></a>min.ber.lims <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">floor</span>(min.min.ber), <span class="fu">ceiling</span>(max.min.ber))</span>
-<span id="cb23-54"><a href="#cb23-54" tabindex="-1"></a>max.uncertainty <span class="ot">&lt;-</span> <span class="fu">max</span>(ber.comp<span class="sc">$</span>uncertainty)</span>
-<span id="cb23-55"><a href="#cb23-55" tabindex="-1"></a></span>
-<span id="cb23-56"><a href="#cb23-56" tabindex="-1"></a>seem3pp <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(<span class="at">data =</span> ber.comp, </span>
-<span id="cb23-57"><a href="#cb23-57" tabindex="-1"></a>       <span class="at">mapping =</span> <span class="fu">aes</span>(<span class="at">x =</span> min_BER, </span>
-<span id="cb23-58"><a href="#cb23-58" tabindex="-1"></a>                     <span class="at">y =</span> uncertainty)) <span class="sc">+</span></span>
-<span id="cb23-59"><a href="#cb23-59" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">size =</span> <span class="dv">1</span>, <span class="at">alpha =</span> <span class="fl">0.8</span>) <span class="sc">+</span></span>
-<span id="cb23-60"><a href="#cb23-60" tabindex="-1"></a>  <span class="fu">geom_label_repel</span>(<span class="fu">aes</span>(<span class="at">label =</span> chnm),</span>
-<span id="cb23-61"><a href="#cb23-61" tabindex="-1"></a>                   <span class="at">data =</span> <span class="fu">subset</span>(ber.comp, chnm <span class="sc">%in%</span> labels.for.a), </span>
-<span id="cb23-62"><a href="#cb23-62" tabindex="-1"></a>                   <span class="at">force =</span> <span class="dv">100</span>,</span>
-<span id="cb23-63"><a href="#cb23-63" tabindex="-1"></a>                   <span class="at">size =</span> <span class="dv">2</span>, </span>
-<span id="cb23-64"><a href="#cb23-64" tabindex="-1"></a>                   <span class="at">label.padding =</span> <span class="fl">0.1</span>, </span>
-<span id="cb23-65"><a href="#cb23-65" tabindex="-1"></a>                   <span class="at">label.size =</span> <span class="fl">0.1</span>, </span>
-<span id="cb23-66"><a href="#cb23-66" tabindex="-1"></a>                   <span class="at">label.r =</span> <span class="fl">0.08</span>, </span>
-<span id="cb23-67"><a href="#cb23-67" tabindex="-1"></a>                   <span class="at">segment.size =</span> <span class="fl">0.1</span>) <span class="sc">+</span></span>
-<span id="cb23-68"><a href="#cb23-68" tabindex="-1"></a>  my_theme <span class="sc">+</span></span>
-<span id="cb23-69"><a href="#cb23-69" tabindex="-1"></a>  <span class="fu">scale_x_continuous</span>(<span class="at">breaks =</span> <span class="fu">seq</span>(min.ber.lims[<span class="dv">1</span>], min.ber.lims[<span class="dv">2</span>], <span class="dv">1</span>), </span>
-<span id="cb23-70"><a href="#cb23-70" tabindex="-1"></a>                     <span class="at">limits =</span> min.ber.lims) <span class="sc">+</span></span>
-<span id="cb23-71"><a href="#cb23-71" tabindex="-1"></a>  <span class="fu">scale_y_continuous</span>(<span class="at">breaks =</span> <span class="fu">seq</span>(<span class="dv">0</span>, <span class="fu">ceiling</span>(max.uncertainty), <span class="dv">1</span>), </span>
-<span id="cb23-72"><a href="#cb23-72" tabindex="-1"></a>                     <span class="at">limits =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fu">ceiling</span>(max.uncertainty))) <span class="sc">+</span></span>
-<span id="cb23-73"><a href="#cb23-73" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">&#39;min BER by Chemical&#39;</span>, <span class="at">y =</span> <span class="fu">TeX</span>(r<span class="st">&#39;($log_{10}ExpoCast_{u95} - log_{10}ExpoCast_{med}$)&#39;</span>))</span>
-<span id="cb23-74"><a href="#cb23-74" tabindex="-1"></a></span>
-<span id="cb23-75"><a href="#cb23-75" tabindex="-1"></a><span class="fu">median</span>(ber.comp<span class="sc">$</span>min_BER)</span>
-<span id="cb23-76"><a href="#cb23-76" tabindex="-1"></a><span class="co">#&gt; [1] 2.9</span></span>
+<span id="cb23-14"><a href="#cb23-14" tabindex="-1"></a><span class="co"># chems with labels </span></span>
+<span id="cb23-15"><a href="#cb23-15" tabindex="-1"></a>chem.labels <span class="ot">&lt;-</span> ber.comp[min_BER <span class="sc">&lt;</span> <span class="dv">0</span>][<span class="fu">order</span>(min_BER)][<span class="dv">1</span><span class="sc">:</span><span class="dv">6</span>, chnm]</span>
+<span id="cb23-16"><a href="#cb23-16" tabindex="-1"></a></span>
+<span id="cb23-17"><a href="#cb23-17" tabindex="-1"></a><span class="co"># theme for the next 2 figures </span></span>
+<span id="cb23-18"><a href="#cb23-18" tabindex="-1"></a>my_theme <span class="ot">&lt;-</span> <span class="fu">theme_bw</span>() <span class="sc">+</span></span>
+<span id="cb23-19"><a href="#cb23-19" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">axis.title =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">8</span>, <span class="at">face =</span> <span class="st">&quot;bold&quot;</span>), </span>
+<span id="cb23-20"><a href="#cb23-20" tabindex="-1"></a>        <span class="at">axis.text =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">7</span>))</span>
+<span id="cb23-21"><a href="#cb23-21" tabindex="-1"></a>  </span>
+<span id="cb23-22"><a href="#cb23-22" tabindex="-1"></a>preg.vs.nonpreg.pp <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(<span class="at">data =</span> ber.comp, <span class="fu">aes</span>(<span class="at">x =</span> plasma_BER50, <span class="at">y =</span> min_BER)) <span class="sc">+</span></span>
+<span id="cb23-23"><a href="#cb23-23" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">alpha =</span> <span class="fl">0.75</span>, <span class="at">size =</span> <span class="dv">1</span>, </span>
+<span id="cb23-24"><a href="#cb23-24" tabindex="-1"></a>             <span class="at">show.legend =</span> T) <span class="sc">+</span></span>
+<span id="cb23-25"><a href="#cb23-25" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">slope =</span> <span class="dv">1</span>, <span class="at">linewidth =</span> <span class="fl">0.5</span>, <span class="at">linetype =</span> <span class="st">&#39;solid&#39;</span>, <span class="at">color =</span> <span class="st">&quot;#666666&quot;</span>) <span class="sc">+</span></span>
+<span id="cb23-26"><a href="#cb23-26" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="fu">aes</span>(<span class="at">slope =</span> <span class="dv">1</span>, <span class="at">intercept =</span> <span class="dv">1</span>), <span class="at">linetype =</span> <span class="st">&#39;longdash&#39;</span>, <span class="at">color =</span> <span class="st">&#39;grey&#39;</span>, <span class="at">linewidth =</span> <span class="fl">0.5</span>) <span class="sc">+</span> <span class="co"># default linesize = 1</span></span>
+<span id="cb23-27"><a href="#cb23-27" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="fu">aes</span>(<span class="at">slope =</span> <span class="dv">1</span>, <span class="at">intercept =</span> <span class="sc">-</span><span class="dv">1</span>), <span class="at">linetype =</span> <span class="st">&#39;longdash&#39;</span>, <span class="at">color =</span> <span class="st">&#39;grey&#39;</span>, <span class="at">linewidth =</span> <span class="fl">0.5</span>) <span class="sc">+</span></span>
+<span id="cb23-28"><a href="#cb23-28" tabindex="-1"></a>  <span class="fu">geom_label_repel</span>(<span class="fu">aes</span>(<span class="at">label =</span> chnm),</span>
+<span id="cb23-29"><a href="#cb23-29" tabindex="-1"></a>                   <span class="at">data =</span> ber.comp[chnm <span class="sc">%in%</span> chem.labels],</span>
+<span id="cb23-30"><a href="#cb23-30" tabindex="-1"></a>                   <span class="at">max.overlaps =</span> <span class="cn">Inf</span>, </span>
+<span id="cb23-31"><a href="#cb23-31" tabindex="-1"></a>                   <span class="at">force =</span> <span class="dv">50</span>, </span>
+<span id="cb23-32"><a href="#cb23-32" tabindex="-1"></a>                   <span class="at">size =</span> <span class="dv">2</span>, </span>
+<span id="cb23-33"><a href="#cb23-33" tabindex="-1"></a>                   <span class="at">label.padding =</span> <span class="fl">0.1</span>, </span>
+<span id="cb23-34"><a href="#cb23-34" tabindex="-1"></a>                   <span class="at">label.size =</span> <span class="fl">0.1</span>, </span>
+<span id="cb23-35"><a href="#cb23-35" tabindex="-1"></a>                   <span class="at">label.r =</span> <span class="fl">0.08</span>, </span>
+<span id="cb23-36"><a href="#cb23-36" tabindex="-1"></a>                   <span class="at">segment.size =</span> <span class="fl">0.2</span>, </span>
+<span id="cb23-37"><a href="#cb23-37" tabindex="-1"></a>                   <span class="at">min.segment.length =</span> <span class="dv">0</span>) <span class="sc">+</span></span>
+<span id="cb23-38"><a href="#cb23-38" tabindex="-1"></a>  my_theme <span class="sc">+</span></span>
+<span id="cb23-39"><a href="#cb23-39" tabindex="-1"></a>  <span class="fu">scale_x_continuous</span>(<span class="at">breaks =</span> <span class="fu">seq</span>(ber.lims[<span class="dv">1</span>], ber.lims[<span class="dv">2</span>], <span class="dv">1</span>), </span>
+<span id="cb23-40"><a href="#cb23-40" tabindex="-1"></a>                     <span class="at">limits =</span> ber.lims) <span class="sc">+</span></span>
+<span id="cb23-41"><a href="#cb23-41" tabindex="-1"></a>  <span class="fu">scale_y_continuous</span>(<span class="at">breaks =</span> <span class="fu">seq</span>(ber.lims[<span class="dv">1</span>], ber.lims[<span class="dv">2</span>], <span class="dv">1</span>), </span>
+<span id="cb23-42"><a href="#cb23-42" tabindex="-1"></a>                     <span class="at">limits =</span> ber.lims) <span class="sc">+</span></span>
+<span id="cb23-43"><a href="#cb23-43" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">&#39;plasma BER using 3compss model&#39;</span>, <span class="at">y =</span> <span class="st">&#39;min BER across DIO/IYD targets and tissues&#39;</span>)</span>
+<span id="cb23-44"><a href="#cb23-44" tabindex="-1"></a></span>
+<span id="cb23-45"><a href="#cb23-45" tabindex="-1"></a><span class="co"># how many chems to the right of y = x?</span></span>
+<span id="cb23-46"><a href="#cb23-46" tabindex="-1"></a>ber.comp[plasma_BER50 <span class="sc">&gt;</span> min_BER, .N] <span class="co">#89 chems </span></span>
+<span id="cb23-47"><a href="#cb23-47" tabindex="-1"></a></span>
+<span id="cb23-48"><a href="#cb23-48" tabindex="-1"></a><span class="co"># plot SEEM3 uncertainty</span></span>
+<span id="cb23-49"><a href="#cb23-49" tabindex="-1"></a>ivive.moe.tb<span class="sc">$</span>uncertainty <span class="ot">=</span> <span class="fu">log10</span>(ivive.moe.tb<span class="sc">$</span>seem3.u95<span class="sc">/</span>ivive.moe.tb<span class="sc">$</span>seem3)</span>
+<span id="cb23-50"><a href="#cb23-50" tabindex="-1"></a>ber.comp<span class="sc">$</span>uncertainty <span class="ot">&lt;-</span> ivive.moe.tb<span class="sc">$</span>uncertainty[<span class="fu">match</span>(ber.comp<span class="sc">$</span>dtxsid, ivive.moe.tb<span class="sc">$</span>dtxsid)]</span>
+<span id="cb23-51"><a href="#cb23-51" tabindex="-1"></a></span>
+<span id="cb23-52"><a href="#cb23-52" tabindex="-1"></a>min.min.ber <span class="ot">&lt;-</span> <span class="fu">min</span>(ber.comp<span class="sc">$</span>min_BER)</span>
+<span id="cb23-53"><a href="#cb23-53" tabindex="-1"></a>max.min.ber <span class="ot">&lt;-</span> <span class="fu">max</span>(ber.comp<span class="sc">$</span>min_BER)</span>
+<span id="cb23-54"><a href="#cb23-54" tabindex="-1"></a>min.ber.lims <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">floor</span>(min.min.ber), <span class="fu">ceiling</span>(max.min.ber))</span>
+<span id="cb23-55"><a href="#cb23-55" tabindex="-1"></a>max.uncertainty <span class="ot">&lt;-</span> <span class="fu">max</span>(ber.comp<span class="sc">$</span>uncertainty)</span>
+<span id="cb23-56"><a href="#cb23-56" tabindex="-1"></a></span>
+<span id="cb23-57"><a href="#cb23-57" tabindex="-1"></a>seem3pp <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(<span class="at">data =</span> ber.comp, </span>
+<span id="cb23-58"><a href="#cb23-58" tabindex="-1"></a>       <span class="at">mapping =</span> <span class="fu">aes</span>(<span class="at">x =</span> min_BER, </span>
+<span id="cb23-59"><a href="#cb23-59" tabindex="-1"></a>                     <span class="at">y =</span> uncertainty)) <span class="sc">+</span></span>
+<span id="cb23-60"><a href="#cb23-60" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">size =</span> <span class="dv">1</span>, <span class="at">alpha =</span> <span class="fl">0.8</span>) <span class="sc">+</span></span>
+<span id="cb23-61"><a href="#cb23-61" tabindex="-1"></a>  <span class="fu">geom_label_repel</span>(<span class="fu">aes</span>(<span class="at">label =</span> chnm),</span>
+<span id="cb23-62"><a href="#cb23-62" tabindex="-1"></a>                   <span class="at">data =</span> <span class="fu">subset</span>(ber.comp, chnm <span class="sc">%in%</span> chem.labels), </span>
+<span id="cb23-63"><a href="#cb23-63" tabindex="-1"></a>                   <span class="at">max.overlaps =</span> <span class="cn">Inf</span>, </span>
+<span id="cb23-64"><a href="#cb23-64" tabindex="-1"></a>                   <span class="at">force =</span> <span class="dv">75</span>,</span>
+<span id="cb23-65"><a href="#cb23-65" tabindex="-1"></a>                   <span class="at">size =</span> <span class="dv">2</span>, </span>
+<span id="cb23-66"><a href="#cb23-66" tabindex="-1"></a>                   <span class="at">label.padding =</span> <span class="fl">0.1</span>, </span>
+<span id="cb23-67"><a href="#cb23-67" tabindex="-1"></a>                   <span class="at">label.size =</span> <span class="fl">0.1</span>, </span>
+<span id="cb23-68"><a href="#cb23-68" tabindex="-1"></a>                   <span class="at">label.r =</span> <span class="fl">0.08</span>, </span>
+<span id="cb23-69"><a href="#cb23-69" tabindex="-1"></a>                   <span class="at">segment.size =</span> <span class="fl">0.2</span>, </span>
+<span id="cb23-70"><a href="#cb23-70" tabindex="-1"></a>                   <span class="at">min.segment.length =</span> <span class="dv">0</span>) <span class="sc">+</span></span>
+<span id="cb23-71"><a href="#cb23-71" tabindex="-1"></a>  my_theme <span class="sc">+</span></span>
+<span id="cb23-72"><a href="#cb23-72" tabindex="-1"></a>  <span class="fu">scale_x_continuous</span>(<span class="at">breaks =</span> <span class="fu">seq</span>(min.ber.lims[<span class="dv">1</span>], min.ber.lims[<span class="dv">2</span>], <span class="dv">1</span>), </span>
+<span id="cb23-73"><a href="#cb23-73" tabindex="-1"></a>                     <span class="at">limits =</span> min.ber.lims) <span class="sc">+</span></span>
+<span id="cb23-74"><a href="#cb23-74" tabindex="-1"></a>  <span class="fu">scale_y_continuous</span>(<span class="at">breaks =</span> <span class="fu">seq</span>(<span class="dv">0</span>, <span class="fu">ceiling</span>(max.uncertainty), <span class="dv">1</span>), </span>
+<span id="cb23-75"><a href="#cb23-75" tabindex="-1"></a>                     <span class="at">limits =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fu">ceiling</span>(max.uncertainty))) <span class="sc">+</span></span>
+<span id="cb23-76"><a href="#cb23-76" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">&#39;min BER by Chemical&#39;</span>, <span class="at">y =</span> <span class="fu">TeX</span>(r<span class="st">&#39;($log_{10}ExpoCast_{u95} - log_{10}ExpoCast_{med}$)&#39;</span>))</span>
 <span id="cb23-77"><a href="#cb23-77" tabindex="-1"></a></span>
-<span id="cb23-78"><a href="#cb23-78" tabindex="-1"></a>bers2 <span class="ot">&lt;-</span> <span class="fu">plot_grid</span>(preg.vs.nonpreg.pp, seem3pp, </span>
-<span id="cb23-79"><a href="#cb23-79" tabindex="-1"></a>          <span class="at">labels =</span> <span class="st">&quot;AUTO&quot;</span>, <span class="at">label_size =</span> <span class="dv">10</span>)</span>
+<span id="cb23-78"><a href="#cb23-78" tabindex="-1"></a><span class="fu">median</span>(ber.comp<span class="sc">$</span>min_BER)</span>
+<span id="cb23-79"><a href="#cb23-79" tabindex="-1"></a><span class="co">#&gt; [1] 2.9</span></span>
 <span id="cb23-80"><a href="#cb23-80" tabindex="-1"></a></span>
-<span id="cb23-81"><a href="#cb23-81" tabindex="-1"></a><span class="co"># ggsave(plot = bers2,</span></span>
-<span id="cb23-82"><a href="#cb23-82" tabindex="-1"></a><span class="co">#        units = &quot;mm&quot;,</span></span>
-<span id="cb23-83"><a href="#cb23-83" tabindex="-1"></a><span class="co">#        dpi = 300,</span></span>
-<span id="cb23-84"><a href="#cb23-84" tabindex="-1"></a><span class="co">#        width = 190, height = 100,</span></span>
-<span id="cb23-85"><a href="#cb23-85" tabindex="-1"></a><span class="co">#        device = &quot;tiff&quot;,</span></span>
-<span id="cb23-86"><a href="#cb23-86" tabindex="-1"></a><span class="co">#        filename = &quot;./figures/300dpi/BER_uncertainty-v4.tiff&quot;)</span></span>
-<span id="cb23-87"><a href="#cb23-87" tabindex="-1"></a><span class="co"># </span></span>
-<span id="cb23-88"><a href="#cb23-88" tabindex="-1"></a><span class="co"># ggsave(plot = bers2,</span></span>
-<span id="cb23-89"><a href="#cb23-89" tabindex="-1"></a><span class="co">#        units = &quot;mm&quot;,</span></span>
-<span id="cb23-90"><a href="#cb23-90" tabindex="-1"></a><span class="co">#        dpi = 300,</span></span>
-<span id="cb23-91"><a href="#cb23-91" tabindex="-1"></a><span class="co">#        width = 190, height = 100,</span></span>
-<span id="cb23-92"><a href="#cb23-92" tabindex="-1"></a><span class="co">#        device = &quot;png&quot;,</span></span>
-<span id="cb23-93"><a href="#cb23-93" tabindex="-1"></a><span class="co">#        filename = &quot;./figures/BER_uncertainty-v4.png&quot;)</span></span></code></pre></div>
+<span id="cb23-81"><a href="#cb23-81" tabindex="-1"></a>bers2 <span class="ot">&lt;-</span> <span class="fu">plot_grid</span>(preg.vs.nonpreg.pp, seem3pp, </span>
+<span id="cb23-82"><a href="#cb23-82" tabindex="-1"></a>          <span class="at">labels =</span> <span class="st">&quot;AUTO&quot;</span>, <span class="at">label_size =</span> <span class="dv">10</span>)</span>
+<span id="cb23-83"><a href="#cb23-83" tabindex="-1"></a></span>
+<span id="cb23-84"><a href="#cb23-84" tabindex="-1"></a><span class="co"># ggsave(plot = bers2,</span></span>
+<span id="cb23-85"><a href="#cb23-85" tabindex="-1"></a><span class="co">#        units = &quot;mm&quot;,</span></span>
+<span id="cb23-86"><a href="#cb23-86" tabindex="-1"></a><span class="co">#        dpi = 300,</span></span>
+<span id="cb23-87"><a href="#cb23-87" tabindex="-1"></a><span class="co">#        width = 190, height = 100,</span></span>
+<span id="cb23-88"><a href="#cb23-88" tabindex="-1"></a><span class="co">#        device = &quot;tiff&quot;,</span></span>
+<span id="cb23-89"><a href="#cb23-89" tabindex="-1"></a><span class="co">#        filename = &quot;./figures/300dpi/BER_uncertainty-v4.tiff&quot;)</span></span>
+<span id="cb23-90"><a href="#cb23-90" tabindex="-1"></a><span class="co"># </span></span>
+<span id="cb23-91"><a href="#cb23-91" tabindex="-1"></a><span class="co"># ggsave(plot = bers2,</span></span>
+<span id="cb23-92"><a href="#cb23-92" tabindex="-1"></a><span class="co">#        units = &quot;mm&quot;,</span></span>
+<span id="cb23-93"><a href="#cb23-93" tabindex="-1"></a><span class="co">#        dpi = 300,</span></span>
+<span id="cb23-94"><a href="#cb23-94" tabindex="-1"></a><span class="co">#        width = 190, height = 100,</span></span>
+<span id="cb23-95"><a href="#cb23-95" tabindex="-1"></a><span class="co">#        device = &quot;png&quot;,</span></span>
+<span id="cb23-96"><a href="#cb23-96" tabindex="-1"></a><span class="co">#        filename = &quot;./figures/BER_uncertainty-v4.png&quot;)</span></span></code></pre></div>
 </div>
 </div>
 <div id="httk-generated-data" class="section level1">
@@ -1116,7 +1119,7 @@ AED = \frac{AC_{50}}{CSS_{50}}
 ## 
 ## locale:
 ## [1] LC_COLLATE=English_United States.utf8 
-## [2] LC_CTYPE=English_United States.utf8   
+## [2] LC_CTYPE=en_US.UTF-8                  
 ## [3] LC_MONETARY=English_United States.utf8
 ## [4] LC_NUMERIC=C                          
 ## [5] LC_TIME=English_United States.utf8    
