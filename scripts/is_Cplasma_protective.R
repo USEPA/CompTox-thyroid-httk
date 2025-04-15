@@ -4,7 +4,7 @@
 # 
 # @author: Kimberly Truong
 # created: 5/30/24
-# updated: 4/11/25
+# updated: 4/15/25
 # ==============================================================================
 
 rm(list=ls())
@@ -106,8 +106,7 @@ ylims <- c(floor(min.maxdiff), ceiling(max.maxdiff)-0.5)
 my_theme <- theme_bw() +
   theme(axis.title = element_text(size = 7, face = "bold"), 
         legend.title = element_text(size = 6), 
-        legend.text = element_text(size = 6), 
-        legend.background = element_blank()) 
+        legend.text = element_text(size = 6)) 
 
 Cdiff <- ggplot(max.diff.m, 
        mapping = aes(x = reorder(chnm, -max.max_diff), 
@@ -223,7 +222,9 @@ tk.plt <- plot_grid(vpp, NULL,
 fig <- plot_grid(Cdiff, NULL, tk.plt,
                  ncol = 3, rel_widths = c(0.5, 0.025, 0.5),
                  labels = c("A", "", "B"),
-                 label_size = 10)
+                 label_size = 10) +
+  theme(plot.background = element_rect(fill = "white", color = "white"))
+
 fig
 
 ggsave(plot = fig,

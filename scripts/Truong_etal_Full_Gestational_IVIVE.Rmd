@@ -435,21 +435,22 @@ legend2 <- grobs[[which(sapply(grobs, function(x) x$name) == "guide-box")]]
 
 # add the legend underneath the plots; make it 10% of the height of the combined plots
 fig9 <- plot_grid(prow, legend2, 
-          nrow = 2, rel_heights = c(0.88,0.12))
+          nrow = 2, rel_heights = c(0.88,0.12)) +
+   theme(plot.background = element_rect(fill = "white", color = "white"))
 
 # ggsave(plot = fig9,
 #        units = "mm",
 #        dpi = 300,
 #        width = 190, height = 150,
 #        device = "tiff",
-#        filename = "./figures/300dpi/preg_prioritization_by_BER-v5.2.tiff")
+#        filename = "./figures/300dpi/preg_prioritization_by_BER-v5-2.tiff")
 # 
 # ggsave(plot = fig9,
 #        units = "mm",
 #        dpi = 300,
 #        width = 190, height = 150,
 #        device = "png",
-#        filename = "./figures/preg_prioritization_by_BER-v5.2.png")
+#        filename = "./figures/preg_prioritization_by_BER-v5-2.png")
 
 ```
 

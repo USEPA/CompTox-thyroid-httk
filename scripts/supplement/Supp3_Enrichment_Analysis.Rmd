@@ -358,7 +358,7 @@ kable(res[[3]], caption = 'For DIO3')
 kable(res[[4]], caption = 'For IYD')
 ```
 
-## Table 5 of Truong et al.  
+## Table 6 of Truong et al.  
 ```{r}
 sig.classes <- lapply(res, function(df) {
   sig <- df %>% 
@@ -499,7 +499,8 @@ uniq.positives <- ggarrange(flavos.venn, triazine.venn,
           label.x = 0,
           label.y = 0.8,
           hjust = 0,
-          nrow = 1, ncol = 2)
+          nrow = 1, ncol = 2) +
+  theme(plot.background = element_rect(fill = "white", color = "white"))
 
 uniq.positives
 dev.off()
@@ -1082,6 +1083,7 @@ piechart <- ggplot(active.pie,
             color = "black", size = 6.5/.pt, 
             position = position_stack(vjust = 0.5)) +
   theme_void() +
+  theme(plot.background = element_rect(fill = "white", color = "white")) +
   theme(legend.position = "bottom",
         legend.text = element_text(size = 7),
         legend.key.size = unit(0.25, "cm"),
@@ -1095,7 +1097,9 @@ aplusb <- plot_grid(piechart, NULL, venn_obj, rel_heights = c(1,1,1),
                     rel_widths = c(0.65, 0.05, 0.3),
                     nrow = 1, 
                     labels = c("A", "B"), 
-                    label_x = -0.01, label_y = 0.9, label_size = 10)
+                    label_x = -0.01, label_y = 0.9, label_size = 10) +
+  theme(plot.background = element_rect(fill = "white", color = "white"))
+
 print(aplusb)
 
 # separate into two figures: Figure 4 

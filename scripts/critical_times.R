@@ -21,7 +21,6 @@ library(latex2exp)
 library(cowplot)
 library(viridis)
 library(openxlsx)
-library(DescTools)
 
 load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', verbose = TRUE)
 
