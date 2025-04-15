@@ -1126,14 +1126,14 @@ print(cplusd)
 # Figure 5
 ggsave(plot = cplusd,
        units = "mm",
-       dpi = 300,
+       dpi = 600,
        width = 190, height = 240,
        device = "png",
        filename = "./figures/longchainc_panactive_class&sel.png")
 
 ggsave(plot = cplusd,
        units = "mm",
-       dpi = 300,
+       dpi = 600,
        width = 190, height = 240,
        device = "tiff",
        filename = "./figures/300dpi/longchainc_panactive_class&sel.tiff")
