@@ -12,7 +12,7 @@
 
 <meta name="author" content="Kimberly T.Truong, John F. Wambaugh, Dustin F. Kapraun, Sarah E. Davidson-Fritz, Stephanie Eytcheson, Richard Judson, Katie Paul-Friedman" />
 
-<meta name="date" content="2025-04-15" />
+<meta name="date" content="2025-04-16" />
 
 <title>Truong et al. (2025): Using Thyroid-Related Bioactivity Data for Full Human Gestational IVIVE</title>
 
@@ -343,7 +343,7 @@ Bioactivity Data for Full Human Gestational IVIVE</h1>
 <h4 class="author">Kimberly T.Truong, John F. Wambaugh, Dustin F.
 Kapraun, Sarah E. Davidson-Fritz, Stephanie Eytcheson, Richard Judson,
 Katie Paul-Friedman</h4>
-<h4 class="date">2025-04-15</h4>
+<h4 class="date">2025-04-16</h4>
 
 
 
@@ -405,8 +405,8 @@ results were saved in the
 <div id="eval-execute.vignette" class="section level3">
 <h3>eval = execute.vignette</h3>
 <p>Several chunks of code in this vignette have “eval =
-execute.vignette” and we set execute.chunk to be FALSE, by default. We
-do this to include all the code that was necessary to produce the
+execute.vignette” and we set execute.vignette to be FALSE, by default.
+We do this to include all the code that was necessary to produce the
 figures but was not run when the vignette was built since some of these
 chunks take a considerable amount of time and the checks on CRAN limit
 how long we can spend building the package. You can still reproduce the
@@ -646,7 +646,7 @@ AED = \frac{AC_{50}}{CSS_{50}}
 <span id="cb15-9"><a href="#cb15-9" tabindex="-1"></a>                     <span class="at">model =</span> <span class="st">&#39;3compartmentss&#39;</span>, </span>
 <span id="cb15-10"><a href="#cb15-10" tabindex="-1"></a>                     <span class="at">output.units =</span> <span class="st">&#39;uM&#39;</span>, </span>
 <span id="cb15-11"><a href="#cb15-11" tabindex="-1"></a>                     <span class="at">parameterize.args.list=</span><span class="fu">list</span>(<span class="at">physchem.exclude=</span><span class="cn">FALSE</span>), </span>
-<span id="cb15-12"><a href="#cb15-12" tabindex="-1"></a>                     <span class="at">suppress.messages =</span> <span class="cn">TRUE</span>) <span class="co"># This does not work- report bug</span></span>
+<span id="cb15-12"><a href="#cb15-12" tabindex="-1"></a>                     <span class="at">suppress.messages =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb15-13"><a href="#cb15-13" tabindex="-1"></a>  </span>
 <span id="cb15-14"><a href="#cb15-14" tabindex="-1"></a>  human.httk.dt<span class="sc">$</span>mc.css50[i] <span class="ot">&lt;-</span> out[<span class="st">&quot;50%&quot;</span>]</span>
 <span id="cb15-15"><a href="#cb15-15" tabindex="-1"></a></span>
@@ -884,32 +884,32 @@ AED = \frac{AC_{50}}{CSS_{50}}
 <span id="cb21-76"><a href="#cb21-76" tabindex="-1"></a>          <span class="at">axis.text.y =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">5</span>), </span>
 <span id="cb21-77"><a href="#cb21-77" tabindex="-1"></a>          <span class="at">axis.text.x =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">6</span>),</span>
 <span id="cb21-78"><a href="#cb21-78" tabindex="-1"></a>          <span class="at">legend.text =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">6</span>), </span>
-<span id="cb21-79"><a href="#cb21-79" tabindex="-1"></a>          <span class="at">legend.title =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">6</span>, <span class="at">hjust =</span> <span class="fl">0.5</span>), </span>
-<span id="cb21-80"><a href="#cb21-80" tabindex="-1"></a>          <span class="at">legend.background =</span> <span class="fu">element_rect</span>(<span class="at">fill =</span> <span class="st">&quot;white&quot;</span>, <span class="at">color =</span> <span class="st">&quot;white&quot;</span>))<span class="sc">+</span></span>
-<span id="cb21-81"><a href="#cb21-81" tabindex="-1"></a>    <span class="fu">coord_flip</span>()</span>
-<span id="cb21-82"><a href="#cb21-82" tabindex="-1"></a>}</span>
-<span id="cb21-83"><a href="#cb21-83" tabindex="-1"></a></span>
-<span id="cb21-84"><a href="#cb21-84" tabindex="-1"></a><span class="co"># remove extra axis labels </span></span>
-<span id="cb21-85"><a href="#cb21-85" tabindex="-1"></a>listgg<span class="sc">$</span>IYD <span class="ot">&lt;-</span> listgg<span class="sc">$</span>IYD <span class="sc">+</span> <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">&#39;&#39;</span>, <span class="at">y =</span> <span class="st">&#39;&#39;</span>)</span>
-<span id="cb21-86"><a href="#cb21-86" tabindex="-1"></a>listgg<span class="sc">$</span>DIO3 <span class="ot">&lt;-</span> listgg<span class="sc">$</span>DIO3 <span class="sc">+</span> </span>
-<span id="cb21-87"><a href="#cb21-87" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">&#39;&#39;</span>) </span>
-<span id="cb21-88"><a href="#cb21-88" tabindex="-1"></a>listgg<span class="sc">$</span>DIO1 <span class="ot">&lt;-</span> listgg<span class="sc">$</span>DIO1 <span class="sc">+</span> <span class="fu">labs</span>(<span class="at">y =</span> <span class="st">&#39;&#39;</span>)</span>
-<span id="cb21-89"><a href="#cb21-89" tabindex="-1"></a></span>
-<span id="cb21-90"><a href="#cb21-90" tabindex="-1"></a><span class="co"># arrange DIO1 and DIO2 with equal sizes since they have ~20 chems each (21 vs 24)</span></span>
-<span id="cb21-91"><a href="#cb21-91" tabindex="-1"></a>pcol1 <span class="ot">&lt;-</span> <span class="fu">plot_grid</span>(listgg<span class="sc">$</span>DIO1, listgg<span class="sc">$</span>DIO2, </span>
-<span id="cb21-92"><a href="#cb21-92" tabindex="-1"></a>                  <span class="at">align =</span> <span class="st">&quot;hv&quot;</span>, <span class="at">nrow =</span> <span class="dv">2</span>, </span>
-<span id="cb21-93"><a href="#cb21-93" tabindex="-1"></a>                  <span class="at">rel_heights =</span> <span class="fu">c</span>(<span class="dv">1</span>,<span class="fl">1.1</span>))</span>
-<span id="cb21-94"><a href="#cb21-94" tabindex="-1"></a></span>
-<span id="cb21-95"><a href="#cb21-95" tabindex="-1"></a><span class="co"># make DIO3 3x taller than IYD (44 chems vs 4)</span></span>
-<span id="cb21-96"><a href="#cb21-96" tabindex="-1"></a>pcol2 <span class="ot">&lt;-</span> <span class="fu">plot_grid</span>(listgg<span class="sc">$</span>IYD, listgg<span class="sc">$</span>DIO3, </span>
-<span id="cb21-97"><a href="#cb21-97" tabindex="-1"></a>                   <span class="at">align =</span> <span class="st">&quot;hv&quot;</span>, <span class="at">nrow =</span> <span class="dv">2</span>, </span>
-<span id="cb21-98"><a href="#cb21-98" tabindex="-1"></a>                   <span class="at">rel_heights =</span> <span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">3</span>))</span>
-<span id="cb21-99"><a href="#cb21-99" tabindex="-1"></a></span>
-<span id="cb21-100"><a href="#cb21-100" tabindex="-1"></a><span class="co"># combine two columns of plots</span></span>
-<span id="cb21-101"><a href="#cb21-101" tabindex="-1"></a>prow <span class="ot">&lt;-</span> <span class="fu">plot_grid</span>(pcol1, pcol2, </span>
-<span id="cb21-102"><a href="#cb21-102" tabindex="-1"></a>                    <span class="at">align =</span> <span class="st">&quot;h&quot;</span>, <span class="at">ncol =</span> <span class="dv">2</span>, </span>
-<span id="cb21-103"><a href="#cb21-103" tabindex="-1"></a>                    <span class="at">rel_widths =</span> <span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">1</span>))</span>
-<span id="cb21-104"><a href="#cb21-104" tabindex="-1"></a></span>
+<span id="cb21-79"><a href="#cb21-79" tabindex="-1"></a>          <span class="at">legend.title =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">6</span>, <span class="at">hjust =</span> <span class="fl">0.5</span>))<span class="sc">+</span></span>
+<span id="cb21-80"><a href="#cb21-80" tabindex="-1"></a>    <span class="fu">coord_flip</span>()</span>
+<span id="cb21-81"><a href="#cb21-81" tabindex="-1"></a>}</span>
+<span id="cb21-82"><a href="#cb21-82" tabindex="-1"></a></span>
+<span id="cb21-83"><a href="#cb21-83" tabindex="-1"></a><span class="co"># remove extra axis labels </span></span>
+<span id="cb21-84"><a href="#cb21-84" tabindex="-1"></a>listgg<span class="sc">$</span>IYD <span class="ot">&lt;-</span> listgg<span class="sc">$</span>IYD <span class="sc">+</span> <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">&#39;&#39;</span>, <span class="at">y =</span> <span class="st">&#39;&#39;</span>)</span>
+<span id="cb21-85"><a href="#cb21-85" tabindex="-1"></a>listgg<span class="sc">$</span>DIO3 <span class="ot">&lt;-</span> listgg<span class="sc">$</span>DIO3 <span class="sc">+</span> </span>
+<span id="cb21-86"><a href="#cb21-86" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">&#39;&#39;</span>) </span>
+<span id="cb21-87"><a href="#cb21-87" tabindex="-1"></a>listgg<span class="sc">$</span>DIO1 <span class="ot">&lt;-</span> listgg<span class="sc">$</span>DIO1 <span class="sc">+</span> <span class="fu">labs</span>(<span class="at">y =</span> <span class="st">&#39;&#39;</span>)</span>
+<span id="cb21-88"><a href="#cb21-88" tabindex="-1"></a></span>
+<span id="cb21-89"><a href="#cb21-89" tabindex="-1"></a><span class="co"># arrange DIO1 and DIO2 with equal sizes since they have ~20 chems each (21 vs 24)</span></span>
+<span id="cb21-90"><a href="#cb21-90" tabindex="-1"></a>pcol1 <span class="ot">&lt;-</span> <span class="fu">plot_grid</span>(listgg<span class="sc">$</span>DIO1, listgg<span class="sc">$</span>DIO2, </span>
+<span id="cb21-91"><a href="#cb21-91" tabindex="-1"></a>                  <span class="at">align =</span> <span class="st">&quot;hv&quot;</span>, <span class="at">nrow =</span> <span class="dv">2</span>, </span>
+<span id="cb21-92"><a href="#cb21-92" tabindex="-1"></a>                  <span class="at">rel_heights =</span> <span class="fu">c</span>(<span class="dv">1</span>,<span class="fl">1.1</span>))</span>
+<span id="cb21-93"><a href="#cb21-93" tabindex="-1"></a></span>
+<span id="cb21-94"><a href="#cb21-94" tabindex="-1"></a><span class="co"># make DIO3 3x taller than IYD (44 chems vs 4)</span></span>
+<span id="cb21-95"><a href="#cb21-95" tabindex="-1"></a>pcol2 <span class="ot">&lt;-</span> <span class="fu">plot_grid</span>(listgg<span class="sc">$</span>IYD, listgg<span class="sc">$</span>DIO3, </span>
+<span id="cb21-96"><a href="#cb21-96" tabindex="-1"></a>                   <span class="at">align =</span> <span class="st">&quot;hv&quot;</span>, <span class="at">nrow =</span> <span class="dv">2</span>, </span>
+<span id="cb21-97"><a href="#cb21-97" tabindex="-1"></a>                   <span class="at">rel_heights =</span> <span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">3</span>))</span>
+<span id="cb21-98"><a href="#cb21-98" tabindex="-1"></a></span>
+<span id="cb21-99"><a href="#cb21-99" tabindex="-1"></a><span class="co"># combine two columns of plots</span></span>
+<span id="cb21-100"><a href="#cb21-100" tabindex="-1"></a>prow <span class="ot">&lt;-</span> <span class="fu">plot_grid</span>(pcol1, pcol2, </span>
+<span id="cb21-101"><a href="#cb21-101" tabindex="-1"></a>                    <span class="at">align =</span> <span class="st">&quot;h&quot;</span>, <span class="at">ncol =</span> <span class="dv">2</span>, </span>
+<span id="cb21-102"><a href="#cb21-102" tabindex="-1"></a>                    <span class="at">rel_widths =</span> <span class="fu">c</span>(<span class="dv">1</span>,<span class="dv">1</span>))</span>
+<span id="cb21-103"><a href="#cb21-103" tabindex="-1"></a></span>
+<span id="cb21-104"><a href="#cb21-104" tabindex="-1"></a><span class="co"># extract legend from one of the plots</span></span>
 <span id="cb21-105"><a href="#cb21-105" tabindex="-1"></a>grobs <span class="ot">&lt;-</span> <span class="fu">ggplotGrob</span>(</span>
 <span id="cb21-106"><a href="#cb21-106" tabindex="-1"></a>  listgg<span class="sc">$</span>DIO2 <span class="sc">+</span> </span>
 <span id="cb21-107"><a href="#cb21-107" tabindex="-1"></a>  <span class="fu">guides</span>(</span>
@@ -926,21 +926,22 @@ AED = \frac{AC_{50}}{CSS_{50}}
 <span id="cb21-118"><a href="#cb21-118" tabindex="-1"></a></span>
 <span id="cb21-119"><a href="#cb21-119" tabindex="-1"></a><span class="co"># add the legend underneath the plots; make it 10% of the height of the combined plots</span></span>
 <span id="cb21-120"><a href="#cb21-120" tabindex="-1"></a>fig9 <span class="ot">&lt;-</span> <span class="fu">plot_grid</span>(prow, legend2, </span>
-<span id="cb21-121"><a href="#cb21-121" tabindex="-1"></a>          <span class="at">nrow =</span> <span class="dv">2</span>, <span class="at">rel_heights =</span> <span class="fu">c</span>(<span class="fl">0.88</span>,<span class="fl">0.12</span>))</span>
-<span id="cb21-122"><a href="#cb21-122" tabindex="-1"></a></span>
-<span id="cb21-123"><a href="#cb21-123" tabindex="-1"></a><span class="co"># ggsave(plot = fig9,</span></span>
-<span id="cb21-124"><a href="#cb21-124" tabindex="-1"></a><span class="co">#        units = &quot;mm&quot;,</span></span>
-<span id="cb21-125"><a href="#cb21-125" tabindex="-1"></a><span class="co">#        dpi = 300,</span></span>
-<span id="cb21-126"><a href="#cb21-126" tabindex="-1"></a><span class="co">#        width = 190, height = 150,</span></span>
-<span id="cb21-127"><a href="#cb21-127" tabindex="-1"></a><span class="co">#        device = &quot;tiff&quot;,</span></span>
-<span id="cb21-128"><a href="#cb21-128" tabindex="-1"></a><span class="co">#        filename = &quot;./figures/300dpi/preg_prioritization_by_BER-v5-2.tiff&quot;)</span></span>
-<span id="cb21-129"><a href="#cb21-129" tabindex="-1"></a><span class="co"># </span></span>
-<span id="cb21-130"><a href="#cb21-130" tabindex="-1"></a><span class="co"># ggsave(plot = fig9,</span></span>
-<span id="cb21-131"><a href="#cb21-131" tabindex="-1"></a><span class="co">#        units = &quot;mm&quot;,</span></span>
-<span id="cb21-132"><a href="#cb21-132" tabindex="-1"></a><span class="co">#        dpi = 300,</span></span>
-<span id="cb21-133"><a href="#cb21-133" tabindex="-1"></a><span class="co">#        width = 190, height = 150,</span></span>
-<span id="cb21-134"><a href="#cb21-134" tabindex="-1"></a><span class="co">#        device = &quot;png&quot;,</span></span>
-<span id="cb21-135"><a href="#cb21-135" tabindex="-1"></a><span class="co">#        filename = &quot;./figures/preg_prioritization_by_BER-v5-2.png&quot;)</span></span></code></pre></div>
+<span id="cb21-121"><a href="#cb21-121" tabindex="-1"></a>          <span class="at">nrow =</span> <span class="dv">2</span>, <span class="at">rel_heights =</span> <span class="fu">c</span>(<span class="fl">0.88</span>,<span class="fl">0.12</span>)) <span class="sc">+</span></span>
+<span id="cb21-122"><a href="#cb21-122" tabindex="-1"></a>   <span class="fu">theme</span>(<span class="at">plot.background =</span> <span class="fu">element_rect</span>(<span class="at">fill =</span> <span class="st">&quot;white&quot;</span>, <span class="at">color =</span> <span class="st">&quot;white&quot;</span>))</span>
+<span id="cb21-123"><a href="#cb21-123" tabindex="-1"></a></span>
+<span id="cb21-124"><a href="#cb21-124" tabindex="-1"></a><span class="co"># ggsave(plot = fig9,</span></span>
+<span id="cb21-125"><a href="#cb21-125" tabindex="-1"></a><span class="co">#        units = &quot;mm&quot;,</span></span>
+<span id="cb21-126"><a href="#cb21-126" tabindex="-1"></a><span class="co">#        dpi = 300,</span></span>
+<span id="cb21-127"><a href="#cb21-127" tabindex="-1"></a><span class="co">#        width = 190, height = 150,</span></span>
+<span id="cb21-128"><a href="#cb21-128" tabindex="-1"></a><span class="co">#        device = &quot;tiff&quot;,</span></span>
+<span id="cb21-129"><a href="#cb21-129" tabindex="-1"></a><span class="co">#        filename = &quot;./figures/300dpi/preg_prioritization_by_BER-v5-2.tiff&quot;)</span></span>
+<span id="cb21-130"><a href="#cb21-130" tabindex="-1"></a><span class="co"># </span></span>
+<span id="cb21-131"><a href="#cb21-131" tabindex="-1"></a><span class="co"># ggsave(plot = fig9,</span></span>
+<span id="cb21-132"><a href="#cb21-132" tabindex="-1"></a><span class="co">#        units = &quot;mm&quot;,</span></span>
+<span id="cb21-133"><a href="#cb21-133" tabindex="-1"></a><span class="co">#        dpi = 300,</span></span>
+<span id="cb21-134"><a href="#cb21-134" tabindex="-1"></a><span class="co">#        width = 190, height = 150,</span></span>
+<span id="cb21-135"><a href="#cb21-135" tabindex="-1"></a><span class="co">#        device = &quot;png&quot;,</span></span>
+<span id="cb21-136"><a href="#cb21-136" tabindex="-1"></a><span class="co">#        filename = &quot;./figures/preg_prioritization_by_BER-v5-2.png&quot;)</span></span></code></pre></div>
 </div>
 </div>
 <div id="comparing-ivive-models-based-on-ber-prioritization" class="section level1">
@@ -1078,17 +1079,17 @@ AED = \frac{AC_{50}}{CSS_{50}}
 <span id="cb23-78"><a href="#cb23-78" tabindex="-1"></a><span class="fu">median</span>(ber.comp<span class="sc">$</span>min_BER)</span>
 <span id="cb23-79"><a href="#cb23-79" tabindex="-1"></a><span class="co">#&gt; [1] 2.9</span></span>
 <span id="cb23-80"><a href="#cb23-80" tabindex="-1"></a></span>
-<span id="cb23-81"><a href="#cb23-81" tabindex="-1"></a>bers2 <span class="ot">&lt;-</span> <span class="fu">plot_grid</span>(preg.vs.nonpreg.pp, seem3pp, </span>
+<span id="cb23-81"><a href="#cb23-81" tabindex="-1"></a>fig10 <span class="ot">&lt;-</span> <span class="fu">plot_grid</span>(preg.vs.nonpreg.pp, seem3pp, </span>
 <span id="cb23-82"><a href="#cb23-82" tabindex="-1"></a>          <span class="at">labels =</span> <span class="st">&quot;AUTO&quot;</span>, <span class="at">label_size =</span> <span class="dv">10</span>)</span>
 <span id="cb23-83"><a href="#cb23-83" tabindex="-1"></a></span>
-<span id="cb23-84"><a href="#cb23-84" tabindex="-1"></a><span class="co"># ggsave(plot = bers2,</span></span>
+<span id="cb23-84"><a href="#cb23-84" tabindex="-1"></a><span class="co"># ggsave(plot = fig10,</span></span>
 <span id="cb23-85"><a href="#cb23-85" tabindex="-1"></a><span class="co">#        units = &quot;mm&quot;,</span></span>
 <span id="cb23-86"><a href="#cb23-86" tabindex="-1"></a><span class="co">#        dpi = 300,</span></span>
 <span id="cb23-87"><a href="#cb23-87" tabindex="-1"></a><span class="co">#        width = 190, height = 100,</span></span>
 <span id="cb23-88"><a href="#cb23-88" tabindex="-1"></a><span class="co">#        device = &quot;tiff&quot;,</span></span>
 <span id="cb23-89"><a href="#cb23-89" tabindex="-1"></a><span class="co">#        filename = &quot;./figures/300dpi/BER_uncertainty-v4.tiff&quot;)</span></span>
 <span id="cb23-90"><a href="#cb23-90" tabindex="-1"></a><span class="co"># </span></span>
-<span id="cb23-91"><a href="#cb23-91" tabindex="-1"></a><span class="co"># ggsave(plot = bers2,</span></span>
+<span id="cb23-91"><a href="#cb23-91" tabindex="-1"></a><span class="co"># ggsave(plot = fig10,</span></span>
 <span id="cb23-92"><a href="#cb23-92" tabindex="-1"></a><span class="co">#        units = &quot;mm&quot;,</span></span>
 <span id="cb23-93"><a href="#cb23-93" tabindex="-1"></a><span class="co">#        dpi = 300,</span></span>
 <span id="cb23-94"><a href="#cb23-94" tabindex="-1"></a><span class="co">#        width = 190, height = 100,</span></span>

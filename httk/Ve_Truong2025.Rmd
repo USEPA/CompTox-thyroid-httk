@@ -1,24 +1,28 @@
 ---
-title: "Truong et al. (2025): Using Thyroid-Related Bioactivity Data for Full Human
-  Gestational IVIVE"
+title: "Truong et al. (2025): Full Human Gestational IVIVE"
 author: "Kimberly T.Truong, John F. Wambaugh, Dustin F. Kapraun, Sarah E. Davidson-Fritz, Stephanie Eytcheson, Richard Judson, Katie Paul-Friedman"
 date:  "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: > 
-  %\VignetteIndexEntry{Truong (2025) Full Human Gestational IVIVE}
+  %\VignetteIndexEntry{e) Truong (2025) Full Human Gestational IVIVE}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
 
+from "Interpretation of thyroid-relevant bioactivity data for comparison to 
+in vivo exposures: A prioritization approach for putative chemical inhibitors 
+of in vitro deiodinase activity"
+
+Kimberly T Truong, John F Wambaugh, Dustin F Kapraun, Sarah E Davidson-Fritz,
+Stephanie Eytcheson, Richard S Judson, and Katie Paul Friedman
+
+Toxicological Sciences, 2025
+
 ## Overview
 
-In this vignette, we show how to use the full human gestational model from **httk** to perform *in vitro-in vivo* extrapolation (IVIVE) on a relevant *in vitro* bioactivity dataset. Briefly, this demonstrates how to take thyroid-related *in vitro* bioactivity data from ToxCast, perform IVIVE using the 3-compartment steady state model and the full human pregnancy model within **httk**, and compare it with the latest exposure estimates from ExpoCast as a method of prioritization. This is detailed in Truong et al. 2025 (submitted). 
+In this vignette, we show how to use the full human gestational model from **httk** to perform *in vitro-in vivo* extrapolation (IVIVE) on a relevant *in vitro* bioactivity dataset. Briefly, this demonstrates how to take thyroid-related *in vitro* bioactivity data from ToxCast, perform IVIVE using the 3-compartment steady state model and the full human pregnancy model within **httk**, and compare it with the latest exposure estimates from ExpoCast as a method of prioritization. This is detailed in Truong et al. 2025 (in review). 
 
-Truong et al. 2025 describes a prioritization workflow for thyroid-related bioactivity data related to deiodinase inhibition and applies the full human gestational model to compute administered equivalent doses (AEDs) and bioactivity-to-exposure ratios (BERs) by integrating SEEM3 ExpoCast predictions. The figure below shows an overview of the workflow. 
-
-![Figure 1 from *Truong et al. 2025*](../figures/fig1-workflow-v5.png){width=100%}
-
-This vignette covers the last step of the workflow "Targeted bioactivity:exposure ratios", and the previous three steps are done by executing `deiod_invitrodb_v3_5_processing.R`.
+Truong et al. 2025 describes a prioritization workflow for thyroid-related bioactivity data related to deiodinase inhibition by applying the full human gestational model to compute administered equivalent doses (AEDs) and bioactivity-to-exposure ratios (BERs) by integrating SEEM3 ExpoCast predictions. See Figure 1 for an overview of the workflow. 
 
 This vignette reproduces Figures 9 and 10 from Truong et al. 2025.
 
@@ -26,31 +30,33 @@ This vignette reproduces Figures 9 and 10 from Truong et al. 2025.
 This vignette was created with **httk** v2.6.0 which includes new model functionality (see **Simulate full-term human pregnancy model**).
 
 ```{r configure-knitr, include = FALSE}
-# this runs on my local but this would have to be changed to the path of the dir you git cloned to
-knitr::opts_knit$set(root.dir = 'C:/Users/ktruong/OneDrive - Environmental Protection Agency (EPA)/Profile/Documents/CompTox-thyroid-httk')
+knitr::opts_chunk$set(collapse = TRUE, comment = '#>')
 options(rmarkdown.html_vignette.check_title = FALSE)
-
 ```
 
-## Data Import 
-We need to load in the processed *in vitro* bioactivity data. This was done by `deiod_invitrodb_v3_5_processing.R`, and results were saved in the `./data/invitrodb_v3_5_deiod_filtered_httk.RData` object.
-
-```{r invitro-data}
+```{r clear-memory, eval = TRUE}
 rm(list = ls())
-load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', verbose = TRUE)
-
 ```
 
 ### eval = execute.vignette
 Several chunks of code in this vignette have "eval = execute.vignette" and we set execute.vignette to be FALSE, by default. We do this to include all the code that was necessary to produce the figures but was not run when the vignette was built since some of these chunks take a considerable amount of time and the checks on CRAN limit how long we can spend
-building the package. You can still reproduce the end figures knitting the .Rmd file, since all the necessary and intermediate data objects are stored in `./data/invitrodb_v3_5_deiod_filtered_httk.RData`. If you want to rerun the whole workflow on your own, you must rerun all code from top to bottom, either by changing execute.vignette to TRUE or clicking on the "green arrow" in RStudio. 
+building the package. You can still reproduce the end figures knitting the .Rmd file, since all the necessary and minimal data objects have been stored in *httk*. If you want to rerun the whole workflow on your own, you must rerun all code from top to bottom, either by changing execute.vignette to TRUE or clicking on the "green arrow" in RStudio. 
 
 ```{r}
-execute.vignette <- FALSE 
+execute.vignette <- FALSE
+```
+
+## Data Import 
+We need to load in the processed *in vitro* bioactivity data. This is stored within *httk* and can be accessed by `httk::thyroid.ac50s`. From the R command prompt,
+`?thyroid.ac50s` for more details. 
+
+```{r invitro-data, eval = execute.vignette}
+ac50.dt <- httk::thyroid.ac50s
+
 ```
 
 ### Load libraries 
-```{r libraries, message = FALSE}
+```{r libraries, message = FALSE, eval = execute.vignette}
 library(httk)
 library(data.table)
 library(dplyr)
@@ -61,15 +67,14 @@ library(ggrepel)
 library(latex2exp)
 library(viridis)
 library(scales)
-library(ggstar) # for better discernible shapes including stars
-
+library(ggstar)
 ```
 
 # IVIVE using 3-compartment steady state model
 
 ## Examine Chemicals
 Only 50 chemicals have experimental toxicokinetic (TK) parameters sufficient for *httk*. 
-```{r exp-TK-chems, warning = FALSE}
+```{r exp-TK-chems, warning = FALSE, eval = execute.vignette}
 # how many chems had experimental TK params?
 human.data.pre <- subset(get_cheminfo(info = 'all', species = 'Human', 
                                       model = '3compartmentss'), 
@@ -81,7 +86,7 @@ nrow(human.data.pre)
 
 ### In silico predictions of TK parameters
 We need to supplement these with *in silico* predictions of TK parameters.
-```{r insilico-preds, message=FALSE, warning=FALSE}
+```{r insilico-preds, message=FALSE, warning=FALSE, eval = execute.vignette}
 # predict Clint/fup values for missing chems 
 # this loads new chem.physical_and_invitro.data table into the global env 
 load_dawson2021() # most data for ToxCast chems
@@ -91,32 +96,16 @@ load_pradeep2020() # best ML method for in silico prediction
 ```
 
 ### Examine missing chemicals 
-```{r missing-chems, warning = FALSE}
+```{r missing-chems, warning = FALSE, eval = execute.vignette}
 human.httk.dt <- subset(ac50.dt, dsstox_substance_id %in% get_cheminfo(info = 'DTXSID', 
                                                                        species = 'Human', 
                                                                        model = '3compartmentss', 
                                                                        physchem.exclude = FALSE,  
                                                                        median.only = TRUE))
-# layer class information to priority chemicals
-ac50.dt$class_type <- all_dat$class_type[match(ac50.dt$dsstox_substance_id, all_dat$dsstox_substance_id)]
-ac50.dt$chosen_class <- all_dat$chosen_class[match(ac50.dt$dsstox_substance_id, all_dat$dsstox_substance_id)]
 
 missing.dtxsids <- setdiff(ac50.dt$dsstox_substance_id, human.httk.dt$dsstox_substance_id)
 
-# a lot of PFAS dropped out (n = 13)
-knitr::kable(ac50.dt[dsstox_substance_id %in% missing.dtxsids, 
-                     .(dsstox_substance_id, chnm, class_type, chosen_class)], 
-             row.names = T)
-
-```
-
-```{r tech-review-chems, eval = execute.vignette, include = FALSE}
-e <- new.env(parent = emptyenv())
-(load('./data/old/invitrodb_v3_5_deiod_filtered_httk_toxsubmission.RData', envir = e))
-
-# these (98) chems were used in coauthor/tech review
-# one of these was a PFAS (DTXSID80379721) predicted by Dawson 2021 so should have been 97 
-#human.httk.dt <- subset(ac50.dt, dsstox_substance_id %in% e$ivive.moe.tb[, dtxsid])
+View(ac50.dt[dsstox_substance_id %in% missing.dtxsids])
 
 ```
 
@@ -167,17 +156,13 @@ human.httk.dt[, fold_diff50 := log10(oral_equiv50/calc.aed50)]
 
 ## Load ExpoCast predictions (SEEM3)
 ```{r seem3, eval = execute.vignette}
-load("./data/chem.preds-2018-11-28.RData", verbose = TRUE)
-SEEM = chem.preds 
-rm(chem.preds)
-
-message(paste("SEEM3 predictions exist for", length(unique(SEEM$dsstox_substance_id)), "chemicals", 
-              sep = " "))
 
 # let's use the aed values from the division 
 human.httk.dt2 <- human.httk.dt[, c('dsstox_substance_id', 'chnm', 
                                     'DIO1', 'DIO2', 'DIO3', 'IYD', 'min_ac50', 
                                     'mc.css50', 'calc.aed50')]
+
+SEEM <- httk::truong25.seem3
 
 # integrate SEEM3 predictions with merge
 human.httk.dt2.seem3 <- merge.data.table(human.httk.dt2, 
@@ -187,9 +172,6 @@ human.httk.dt2.seem3 <- merge.data.table(human.httk.dt2,
 
 human.httk.dt2.seem3[, plasmaBER50 := calc.aed50/seem3.u95]
 human.httk.dt2.seem3[, log.pBER50 := log10(plasmaBER50)]
-
-# offload memory
-rm(SEEM)
 
 ivive.moe.tb <- human.httk.dt2.seem3
 setnames(ivive.moe.tb, "dsstox_substance_id", "dtxsid")
@@ -443,15 +425,8 @@ fig9 <- plot_grid(prow, legend2,
 #        units = "mm",
 #        dpi = 300,
 #        width = 190, height = 150,
-#        device = "tiff",
-#        filename = "./figures/300dpi/preg_prioritization_by_BER-v5-2.tiff")
-# 
-# ggsave(plot = fig9,
-#        units = "mm",
-#        dpi = 300,
-#        width = 190, height = 150,
 #        device = "png",
-#        filename = "./figures/preg_prioritization_by_BER-v5-2.png")
+#        filename = "./figures/preg_prioritization_by_BER.png")
 
 ```
 
@@ -599,36 +574,16 @@ fig10 <- plot_grid(preg.vs.nonpreg.pp, seem3pp,
 #        units = "mm",
 #        dpi = 300,
 #        width = 190, height = 100,
-#        device = "tiff",
-#        filename = "./figures/300dpi/BER_uncertainty-v4.tiff")
-# 
-# ggsave(plot = fig10,
-#        units = "mm",
-#        dpi = 300,
-#        width = 190, height = 100,
 #        device = "png",
-#        filename = "./figures/BER_uncertainty-v4.png")
-
-
-```
-
-# httk-generated data 
-```{r create-httk-RData, eval = execute.vignette}
-e <- new.env(parent = emptyenv())
-(load('./data/invitrodb_v3_5_deiod_filtered_httk.RData', envir = e))
-
-e$ivive.moe.tb <- ivive.moe.tb # IVIVE table for 3compss with BER_plasmas and half-lives
-e$tissue.aeds <- tissue.aeds # AEDs for each target by C(f)tissue
-e$tissue.bers <- tissue.bers # all AEDs for each target with SEEM3 estimates for every chem (long)
-e$plasma.tissue.bers <- plasma.tissue.bers # preg vs non-preg BERs (majority of Table 7)
-
-do.call("save", c(ls(envir = e),
-                  list(envir = e, file ='./data/invitrodb_v3_5_deiod_filtered_httk.RData')))
+#        filename = "./figures/BER_uncertainty.png")
 
 ```
 
-# sessionInfo()
-```{r, echo = FALSE}
-sessionInfo()
+# Code used to create data distributed with vignette
+```{r create_distributable_data, eval = FALSE}
+thyroid.ac50s <- ac50.dt
+truong25.seem3 <- SEEM
 
+save(thyroid.ac50s, truong25.seem3,
+     file="./httk/Truong2025Vignette.RData")
 ```
